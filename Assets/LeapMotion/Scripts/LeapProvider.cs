@@ -17,7 +17,7 @@ namespace Leap {
    * Used to provide temporally correct frames within FixedUpdate */
     private SmoothedFloat smoothedFixedUpdateOffset_ = new SmoothedFloat();
     /** The maximum offset calculated per frame */
-    public float PerFrameFixedUpdateOffset;
+    //public float PerFrameFixedUpdateOffset;
     /** Conversion factor for nanoseconds to seconds. */
     protected const float NS_TO_S = 1e-6f;
     /** Conversion factor for seconds to nanoseconds. */
@@ -126,7 +126,7 @@ namespace Leap {
       leapMat = UnityMatrixExtension.GetLeapMatrix(this.transform);
       CurrentFrame = leap_controller_.GetTransformedFrame(leapMat, 0);
       //perFrameFixedUpdateOffset_ contains the maximum offset of this Update cycle
-      smoothedFixedUpdateOffset_.Update(PerFrameFixedUpdateOffset, Time.deltaTime);
+      //smoothedFixedUpdateOffset_.Update(PerFrameFixedUpdateOffset, Time.deltaTime);
       //float now = leap_controller_.Now();
       //Debug.Log("leap_controller_.Now():" + leap_controller_.Now() + " - CurrentFrame.Timestamp:" + CurrentFrame.Timestamp + " = " + (leap_controller_.Now() - CurrentFrame.Timestamp));
       //Debug.Log("provider.Update().CurrentFrame.Id: " + CurrentFrame.Id);

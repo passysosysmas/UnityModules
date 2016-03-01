@@ -140,7 +140,7 @@ namespace Leap {
       //All FixedUpdates of a frame happen before Update, so only the last of these calculations is passed
       //into Update for smoothing.
       var latestFrame = Provider.CurrentFrame;
-      Provider.PerFrameFixedUpdateOffset = latestFrame.Timestamp * NS_TO_S - Time.fixedTime;
+      //Provider.PerFrameFixedUpdateOffset = latestFrame.Timestamp * NS_TO_S - Time.fixedTime;
 
       Frame frame = Provider.GetFixedFrame();
 
