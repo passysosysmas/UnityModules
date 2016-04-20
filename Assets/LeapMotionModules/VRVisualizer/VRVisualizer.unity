@@ -3640,7 +3640,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _provider: {fileID: 1476913613}
-  _gammaCorrection: 1.7
+  _gammaCorrection: 1
   ImageTimeout: 9000
 --- !u!114 &1208633870
 MonoBehaviour:
