@@ -1,4 +1,6 @@
 ﻿using UnityEngine;
+using UnityEngine.VR;
+
 
 namespace Leap.Unity.PinchUtility {
 
@@ -67,6 +69,7 @@ namespace Leap.Unity.PinchUtility {
         Debug.LogWarning("Both Pinch Detectors of the LeapRTS component must be assigned. This component has been disabled.");
         enabled = false;
       }
+
 
       GameObject pinchControl = new GameObject("RTS Anchor");
       _anchor = pinchControl.transform;

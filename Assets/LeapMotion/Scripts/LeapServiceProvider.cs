@@ -35,6 +35,9 @@ namespace Leap.Unity {
     [Tooltip("How much delay should be added to interpolation.  A non-zero amount is needed to prevent extrapolation artifacts.")]
     [SerializeField]
     protected long _interpolationDelay = 15;
+    Int64 leapFrameTime;
+    float curUpdateTime;
+    float curFixedUpdateTime;
 
     protected Controller leap_controller_;
 
@@ -154,14 +157,15 @@ namespace Leap.Unity {
         Debug.LogWarning("Unity hot reloading not currently supported. Stopping Editor Playback.");
       }
 #endif
-
+      curUpdateTime = Time.time;
       Int64 unityTime = (Int64)(Time.time * 1e6);
       clockCorrelator.UpdateRebaseEstimate(unityTime);
 
       Frame serviceFrame;
       if (_useInterpolation) {
         Int64 unityOffsetTime = unityTime - _interpolationDelay * 1000;
-        Int64 leapFrameTime = clockCorrelator.ExternalClockToLeapTime(unityOffsetTime);
+        leapFrameTime = clockCorrelator.ExternalClockToLeapTime(unityOffsetTime);
+        //DebugGraph.Log("LeapFrameTimeToTime", (leapFrameTime) - (unityTime));
         serviceFrame = leap_controller_.GetInterpolatedFrame(leapFrameTime);
       } else {
         serviceFrame = leap_controller_.Frame();
@@ -174,9 +178,21 @@ namespace Leap.Unity {
     }
 
     protected virtual void FixedUpdate() {
-      //TODO: Find suitable interpolation strategy for FixedUpdate
-      LeapTransform leapMat = transform.GetLeapMatrix();
-      _currentFixedFrame = leap_controller_.Frame().TransformedCopy(leapMat);
+        curFixedUpdateTime = Time.fixedTime;
+        float timeOffset = curFixedUpdateTime - curUpdateTime;
+
+        Frame serviceFrame;
+        if (_useInterpolation) {
+            //DebugGraph.Log("FixedTime to Time Offset", curFixedUpdateTime - curUpdateTime);
+            //DebugGraph.Log("LeapFrameTimeToFixedTime", (leapFrameTime) - (curFixedUpdateTime * S_TO_NS));
+            serviceFrame = leap_controller_.GetInterpolatedFrame(leapFrameTime + (long)((timeOffset) * S_TO_NS));
+        } else {
+            serviceFrame = leap_controller_.Frame();
+        }
+
+            LeapTransform leapMat = transform.GetLeapMatrix();
+            _currentFixedFrame = leap_controller_.Frame().TransformedCopy(leapMat);
+
     }
 
     protected virtual void OnDestroy() {
@@ -228,7 +244,7 @@ namespace Leap.Unity {
       }
     }
 
-    /** Calling this method stop the connection for the existing instance of a Controller, 
+    /** Calling this method stop the connection for the existing instance of a Controller,
      * clears old policy flags and resets to null */
     protected void destroyController() {
       if (leap_controller_ != null) {
