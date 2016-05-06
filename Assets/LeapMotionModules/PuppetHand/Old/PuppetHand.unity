@@ -226,7 +226,7 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 11425120, guid: af970f3424924a14b87e69f3695e24ed, type: 2}
       propertyPath: hybridConstraints
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 118608, guid: af970f3424924a14b87e69f3695e24ed, type: 2}
       propertyPath: m_IsActive
@@ -2595,7 +2595,7 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 188576, guid: 39d18871c11b53c4082d8202e3db68a3, type: 2}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 11407378, guid: 39d18871c11b53c4082d8202e3db68a3, type: 2}
@@ -2842,7 +2842,7 @@ Prefab:
       objectReference: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
     - target: {fileID: 188576, guid: 869d20cdda15af24aab9e72b5f2eec78, type: 2}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 11407378, guid: 869d20cdda15af24aab9e72b5f2eec78, type: 2}
       propertyPath: m_Enabled
@@ -3731,7 +3731,7 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 188576, guid: 869d20cdda15af24aab9e72b5f2eec78, type: 2}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 11407378, guid: 869d20cdda15af24aab9e72b5f2eec78, type: 2}
@@ -4250,7 +4250,7 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 11444082, guid: e5968fdcff59d5f4cbd795cfe79daa9a, type: 2}
       propertyPath: hybridConstraints
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 117666, guid: e5968fdcff59d5f4cbd795cfe79daa9a, type: 2}
       propertyPath: m_IsActive
@@ -4773,7 +4773,7 @@ Prefab:
       objectReference: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
     - target: {fileID: 188576, guid: 39d18871c11b53c4082d8202e3db68a3, type: 2}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 11407378, guid: 39d18871c11b53c4082d8202e3db68a3, type: 2}
       propertyPath: m_Enabled

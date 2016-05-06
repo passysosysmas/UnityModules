@@ -2463,7 +2463,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   handedness: 1
   _perBoneMass: 3
-  _maxVelocity: 2000
+  _maxVelocity: 3
   _collisionDetection: 2
   _material: {fileID: 13400000, guid: cdc5d69c70d74324fb4c0709faa4791c, type: 2}
   uncollideFarBones: 0
@@ -2471,7 +2471,7 @@ MonoBehaviour:
   useConstraints: 0
   setFingerVelocity: 1
   noCollideWithStaticGeometry: 1
-  showHand: 1
+  showHand: 0
   _vismaterial: {fileID: 2100000, guid: 37b3860f71bcb46678c5723a9e45080b, type: 2}
   _sphereMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
   _cylinderResolution: 10
@@ -2671,7 +2671,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   handedness: 0
   _perBoneMass: 3.333
-  _maxVelocity: 2
+  _maxVelocity: 3
   _collisionDetection: 2
   _material: {fileID: 13400000, guid: cdc5d69c70d74324fb4c0709faa4791c, type: 2}
   uncollideFarBones: 0
@@ -2679,7 +2679,7 @@ MonoBehaviour:
   useConstraints: 0
   setFingerVelocity: 1
   noCollideWithStaticGeometry: 1
-  showHand: 1
+  showHand: 0
   _vismaterial: {fileID: 2100000, guid: 37b3860f71bcb46678c5723a9e45080b, type: 2}
   _sphereMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
   _cylinderResolution: 10

@@ -127,17 +127,18 @@ namespace Leap.Unity
         public override void InitHand()
         {
             base.InitHand();
+            if (showHand) {
+                _jointSpheres = new Transform[4 * 5];
+                _armRenderers = new List<Renderer>();
+                _capsuleTransforms = new List<Transform>();
+                _sphereATransforms = new List<Transform>();
+                _sphereBTransforms = new List<Transform>();
 
-            _jointSpheres = new Transform[4 * 5];
-            _armRenderers = new List<Renderer>();
-            _capsuleTransforms = new List<Transform>();
-            _sphereATransforms = new List<Transform>();
-            _sphereBTransforms = new List<Transform>();
-
-            CYLINDER_RADIUS *= transform.lossyScale.x;
-            createSpheres();
-            createCylinders();
-            updateArmVisibility();
+                CYLINDER_RADIUS *= transform.lossyScale.x;
+                createSpheres();
+                createCylinders();
+                updateArmVisibility();
+            }
         }
 
         public override void BeginHand()
@@ -310,19 +311,21 @@ namespace Leap.Unity
                     }
                 }
             }
-            for (int i = 0; i < _capsuleTransforms.Count; i++) {
-                _capsuleTransforms[i].gameObject.SetActive(true);
+            if (showHand) {
+                for (int i = 0; i < _capsuleTransforms.Count; i++) {
+                    _capsuleTransforms[i].gameObject.SetActive(true);
+                }
+                for (int i = 0; i < _jointSpheres.Length; i++) {
+                    _jointSpheres[i].gameObject.SetActive(true);
+                }
+                wristPositionSphere.gameObject.SetActive(true);
+                mockThumbJointSphere.gameObject.SetActive(true);
+                armBackLeft.gameObject.SetActive(true);
+                armBackRight.gameObject.SetActive(true);
+                armFrontLeft.gameObject.SetActive(true);
+                armFrontRight.gameObject.SetActive(true);
+                palmPositionSphere.gameObject.SetActive(true);
             }
-            for (int i = 0; i < _jointSpheres.Length; i++) {
-                _jointSpheres[i].gameObject.SetActive(true);
-            }
-            wristPositionSphere.gameObject.SetActive(true);
-            mockThumbJointSphere.gameObject.SetActive(true);
-            armBackLeft.gameObject.SetActive(true);
-            armBackRight.gameObject.SetActive(true);
-            armFrontLeft.gameObject.SetActive(true);
-            armFrontRight.gameObject.SetActive(true);
-            palmPositionSphere.gameObject.SetActive(true);
         }
 
         public override void UpdateHand()
@@ -444,14 +447,16 @@ namespace Leap.Unity
                 }
             }
 
-            //Update the spheres first
-            updateSpheres();
-            //Update Arm only if we need to
-            if (_showArm) {
-                updateArm();
+            if (showHand) {
+                //Update the spheres first
+                updateSpheres();
+                //Update Arm only if we need to
+                if (_showArm) {
+                    updateArm();
+                }
+                //The capsule transforms are deterimined by the spheres they are connected to
+                updateCapsules();
             }
-            //The capsule transforms are deterimined by the spheres they are connected to
-            updateCapsules();
         }
 
         public override void FinishHand()
@@ -467,19 +472,21 @@ namespace Leap.Unity
             GameObject.Destroy(HandParent);
 
 
-            for (int i = 0; i < _capsuleTransforms.Count; i++) {
-                _capsuleTransforms[i].gameObject.SetActive(false);
+            if (showHand) {
+                for (int i = 0; i < _capsuleTransforms.Count; i++) {
+                    _capsuleTransforms[i].gameObject.SetActive(false);
+                }
+                for (int i = 0; i < _jointSpheres.Length; i++) {
+                    _jointSpheres[i].gameObject.SetActive(false);
+                }
+                wristPositionSphere.gameObject.SetActive(false);
+                mockThumbJointSphere.gameObject.SetActive(false);
+                armBackLeft.gameObject.SetActive(false);
+                armBackRight.gameObject.SetActive(false);
+                armFrontLeft.gameObject.SetActive(false);
+                armFrontRight.gameObject.SetActive(false);
+                palmPositionSphere.gameObject.SetActive(false);
             }
-            for (int i = 0; i < _jointSpheres.Length; i++) {
-                _jointSpheres[i].gameObject.SetActive(false);
-            }
-            wristPositionSphere.gameObject.SetActive(false);
-            mockThumbJointSphere.gameObject.SetActive(false);
-            armBackLeft.gameObject.SetActive(false);
-            armBackRight.gameObject.SetActive(false);
-            armFrontLeft.gameObject.SetActive(false);
-            armFrontRight.gameObject.SetActive(false);
-            palmPositionSphere.gameObject.SetActive(false);
             base.FinishHand();
         }
 
