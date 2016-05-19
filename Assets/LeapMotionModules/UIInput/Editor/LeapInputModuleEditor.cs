@@ -10,6 +10,7 @@ namespace Leap.Unity.InputModule {
       base.OnEnable();
       LeapInputModule module = target as LeapInputModule;
 
+<<<<<<< HEAD
       specifyConditionalDrawing(() => module.InteractionMode == LeapInputModule.InteractionCapability.Hybrid || module.InteractionMode == LeapInputModule.InteractionCapability.Projective,
                                "PinchingThreshold",
                                "EnvironmentPointer");
@@ -21,6 +22,15 @@ namespace Leap.Unity.InputModule {
                                "ProjectiveToTactileTransitionDistance");
 
       specifyConditionalDrawing(() => module.ShowAdvancedOptions,
+=======
+      specifyConditionalDrawing(() => ProjectiveAllowed(module.InteractionMode),
+                               "PinchingThreshold");
+
+      specifyConditionalDrawing(() => isTrue(module.InteractionMode == LeapInputModule.InteractionCapability.Hybrid),
+                               "ProjectiveToTactileTransitionDistance");
+
+      specifyConditionalDrawing(() => isTrue(module.ShowAdvancedOptions),
+>>>>>>> refs/remotes/origin/develop
                          "InteractionMode",
                          "OverrideScrollViewClicks",
                          "DrawDebug",
@@ -39,11 +49,17 @@ namespace Leap.Unity.InputModule {
                          "ProjectiveToTactileTransitionDistance",
                          "PinchingThreshold",
                          "RetractUI",
+<<<<<<< HEAD
                          "TactilePadding",
                          "EnvironmentPointer",
                          "ShowExperimentalOptions");
 
       specifyConditionalDrawing(() => module.ShowExperimentalOptions,
+=======
+                         "ShowExperimentalOptions");
+
+      specifyConditionalDrawing(() => isTrue(module.ShowExperimentalOptions),
+>>>>>>> refs/remotes/origin/develop
                    "OverrideScrollViewClicks",
                    "DrawDebug",
                    "TriggerHoverOnElementSwitch",
@@ -53,5 +69,12 @@ namespace Leap.Unity.InputModule {
     bool ProjectiveAllowed(LeapInputModule.InteractionCapability mode) {
       return mode != LeapInputModule.InteractionCapability.Tactile;
     }
+<<<<<<< HEAD
+=======
+
+    bool isTrue(bool truth) {
+      return truth;
+    }
+>>>>>>> refs/remotes/origin/develop
   }
 }

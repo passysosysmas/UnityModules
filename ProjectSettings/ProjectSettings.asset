@@ -10,7 +10,7 @@ PlayerSettings:
   useOnDemandResources: 0
   accelerometerFrequency: 60
   companyName: LeapMotion
-  productName: OrionGearVR
+  productName: OrionCoreAssets
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenStyle: 0
@@ -96,8 +96,12 @@ PlayerSettings:
   preloadedAssets: []
   metroEnableIndependentInputSource: 0
   xboxOneDisableKinectGpuReservation: 0
+<<<<<<< HEAD
   singlePassStereoRendering: 0
   protectGraphicsMemory: 0
+=======
+  virtualRealitySupported: 0
+>>>>>>> refs/remotes/origin/develop
   productGUID: 7095a052d2dfd6642a958de988530851
   AndroidBundleVersionCode: 1
   AndroidMinSdkVersion: 19
