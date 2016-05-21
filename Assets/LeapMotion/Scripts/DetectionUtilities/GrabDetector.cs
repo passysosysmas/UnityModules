@@ -155,17 +155,21 @@ namespace Leap.Unity {
             CurrentStrength = hand.GrabStrength;
 
       var fingers = hand.Fingers;
-      GrabCenter = Vector3.zero;
+      GrabCenter = hand.WristPosition.ToVector3();
+      GrabForward = Vector3.zero;
       GrabSize = 0;
       for (int i = 0; i < fingers.Count; i++) {
         Finger finger = fingers[i];
         GrabCenter += finger.TipPosition.ToVector3();
         GrabSize += fingers[0].TipPosition.DistanceTo(finger.TipPosition);
+        if(i > 0) { //don't include thumb
+          GrabForward += finger.TipPosition.ToVector3();
+        }
       }
-      GrabCenter /= 5.0f;
+      GrabCenter /= 6.0f;
       GrabSize /= 4;
-
-      GrabForward = (hand.WristPosition.ToVector3() - fingers[2].TipPosition.ToVector3()).normalized;
+    
+      GrabForward = (GrabForward/4 - hand.WristPosition.ToVector3()).normalized;
       Vector3 thumbToPinky = fingers[0].TipPosition.ToVector3() - fingers[4].TipPosition.ToVector3();
       GrabNormal = Vector3.Cross(GrabForward, thumbToPinky).normalized;
       GrabRotation = Quaternion.LookRotation(GrabForward, GrabNormal);

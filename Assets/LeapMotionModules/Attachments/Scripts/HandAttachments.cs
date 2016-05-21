@@ -40,7 +40,9 @@ namespace Leap.Unity{
     public Transform Ring;
     /** The tip of the pinky finger. */
     public Transform Pinky;
-  
+    /** The grasp point in the center of the fingers. */
+    public Transform GraspPoint;
+
     private Hand _hand;
   
     public override ModelType HandModelType {
@@ -106,6 +108,23 @@ namespace Leap.Unity{
         Vector pinchPoint = Vector.Lerp(thumbTip, indexTip, 0.5f);
         PinchPoint.position = pinchPoint.ToVector3();
         PinchPoint.rotation = _hand.Rotation.ToQuaternion();
+      }
+      if(GraspPoint != null){
+        var fingers = _hand.Fingers;
+        Vector3 GrabCenter = _hand.WristPosition.ToVector3();
+        Vector3 GrabForward = Vector3.zero;
+        for (int i = 0; i < fingers.Count; i++) {
+          Finger finger = fingers[i];
+          GrabCenter += finger.TipPosition.ToVector3();
+          if (i > 0) { //don't include thumb
+            GrabForward += finger.TipPosition.ToVector3();
+          }
+        }
+        GraspPoint.position = GrabCenter / 6.0f;
+        GrabForward = (GrabForward / 4 - _hand.WristPosition.ToVector3()).normalized;
+        Vector3 thumbToPinky = fingers[0].TipPosition.ToVector3() - fingers[4].TipPosition.ToVector3();
+        Vector3 GrabNormal = Vector3.Cross(GrabForward, thumbToPinky).normalized;
+        GraspPoint.rotation = Quaternion.LookRotation(GrabForward, GrabNormal);
       }
     }
   }

@@ -159,18 +159,18 @@ namespace Leap.Unity {
       }
 
       float pinchDistance = hand.PinchDistance * MM_TO_M;
-      transform.rotation = hand.Basis.CalculateRotation();
+      _pinchRotation = hand.Basis.CalculateRotation();
 
       var fingers = hand.Fingers;
-      transform.position = Vector3.zero;
+      _pinchPos = Vector3.zero;
       for (int i = 0; i < fingers.Count; i++) {
         Finger finger = fingers[i];
         if (finger.Type == Finger.FingerType.TYPE_INDEX ||
             finger.Type == Finger.FingerType.TYPE_THUMB) {
-          transform.position += finger.Bone(Bone.BoneType.TYPE_DISTAL).NextJoint.ToVector3();
+          _pinchPos += finger.Bone(Bone.BoneType.TYPE_DISTAL).NextJoint.ToVector3();
         }
       }
-      transform.position /= 2.0f;
+      _pinchPos /= 2.0f;
 
       if (_isPinching) {
         if (pinchDistance > _deactivatePinchDist) {
@@ -184,8 +184,8 @@ namespace Leap.Unity {
       }
 
       if (_isPinching) {
-        _pinchPos = transform.position;
-        _pinchRotation = transform.rotation;
+        //_pinchPos = transform.position;
+        //_pinchRotation = transform.rotation;
       }
     }
 
