@@ -21,7 +21,7 @@ namespace Leap.Unity {
    * 
    * @since 4.1.2
    */
-  public class Detector : MonoBehaviour {
+  public abstract class Detector : MonoBehaviour {
     /** The current detector state. 
      * @since 4.1.2 
      */

@@ -44,12 +44,15 @@ namespace Leap.Unity {
     }
 
     protected virtual void Awake() {
-      if (GetComponent<IHandModel>() != null) {
-        Debug.LogWarning("LeapPinchDetector should not be attached to the IHandModel's transform. It should be attached to its own transform.");
+      if (GetComponent<IHandModel>() != null && ControlsTransform == true) {
+        Debug.LogWarning("PinchDetector should not be attached to the IHandModel's transform. It should be attached to its own transform.");
       }
       if (_handModel == null) {
-        Debug.LogWarning("The HandModel field of LeapPinchDetector was unassigned and the detector has been disabled.");
-        enabled = false;
+        _handModel = GetComponentInParent<IHandModel>();
+        if(_handModel == null) {
+          Debug.LogWarning("The HandModel field of PinchDetector was unassigned and the detector has been disabled.");
+          enabled = false;
+        }
       }
     }
 
@@ -59,6 +62,14 @@ namespace Leap.Unity {
       //be updated on demand
       ensurePinchInfoUpToDate();
     }
+
+    /**
+    * Whether the Transform of the object containing the PinchDetector script
+    * is transformed by the Position and Rotation of the pinch when IsPinching is true.
+    *
+    * If false, the Transform is not affected.
+    */
+    public bool ControlsTransform = true;
 
     /// <summary>
     /// Returns whether or not the dectector is currently detecting a pinch.
@@ -207,7 +218,7 @@ namespace Leap.Unity {
 
     #if UNITY_EDITOR
     void OnDrawGizmos () {
-      if (ShowGizmos) {
+      if (ShowGizmos && _handModel != null) {
         Color centerColor = Color.clear;
         Vector3 centerPosition = Vector3.zero;
         Quaternion circleRotation = Quaternion.identity;
