@@ -3,45 +3,64 @@ using System.Collections;
 using Leap;
 
 namespace Leap.Unity { 
-  public class AbstractHoldDetector : Detector {
+  public abstract class AbstractHoldDetector : Detector {
 
-    public IHandModel HandModel;
-    [Range(0, 180)]
-    public float ActivateValue = 110f; //degrees
-    [Range(0, 180)]
-    public float DeactivateValue = 90f; //degrees
+    /** Implementations must implement this method. */
+    protected abstract void ensureUpToDate();
 
-    public float CurrentAngle; //debug
-    public float CurrentStrength; //debug
+    [SerializeField]
+    protected IHandModel _handModel;
+    public IHandModel HandModel { get { return _handModel; } set { _handModel = value; } }
 
-    public Vector3 Direction = Vector3.forward;
-    public Vector3 Normal = Vector3.up;
-    public float Distance;
+    public float ActivateValue; //degrees
+    public float DeactivateValue; //degrees
+
+    /**
+    * Whether the Transform of the object containing the PinchDetector script
+    * is transformed by the Position and Rotation of the pinch when IsPinching is true.
+    *
+    * If false, the Transform is not affected.
+    */
+    public bool ControlsTransform = true;
 
     protected int _lastUpdateFrame = -1;
 
-    protected bool _isHolding = false;
     protected bool _didChange = false;
-
-    protected float _lastHoldTime = 0.0f;
-    protected float _lastReleaseTime = 0.0f;
 
     protected Vector3 _position;
     protected Quaternion _rotation;
+    protected Vector3 _direction = Vector3.forward;
+    protected Vector3 _normal = Vector3.up;
+    protected float _distance;
+
+    protected float _lastHoldTime = 0.0f;
+    protected float _lastReleaseTime = 0.0f;
+    protected Vector3 _lastPosition = Vector3.zero;
+    protected Quaternion _lastRotation = Quaternion.identity;
+    protected Vector3 _lastDirection = Vector3.forward;
+    protected Vector3 _lastNormal = Vector3.up;
+    protected float _lastDistance = 1.0f;
 
     protected virtual void OnValidate() {
       ActivateValue = Mathf.Max(0, ActivateValue);
       DeactivateValue = Mathf.Max(0, DeactivateValue);
 
-      //Activate angle cannot be less than deactivate angle
+      //Activate value cannot be less than deactivate value
       if (DeactivateValue > ActivateValue) {
         DeactivateValue = ActivateValue;
       }
     }
 
     protected virtual void Awake() {
-      if (HandModel == null) {
-        HandModel = gameObject.GetComponentInParent<IHandModel>();
+      if (GetComponent<IHandModel>() != null && ControlsTransform == true) {
+        Debug.LogWarning("Detector should not be control the IHandModel's transform. Either attach it to its own transform or set ControlsTransform to false.");
+      }
+      if (_handModel == null) {
+        _handModel = GetComponentInParent<IHandModel>();
+        if (_handModel == null) {
+          Debug.LogWarning("The HandModel field of PinchDetector was unassigned and the detector has been disabled.");
+          enabled = false;
+        }
       }
     }
 
@@ -53,12 +72,12 @@ namespace Leap.Unity {
     }
 
     /// <summary>
-    /// Returns whether or not the dectector is currently detecting a pinch.
+    /// Returns whether or not the dectector is currently detecting a pinch or grab.
     /// </summary>
-    public bool IsGrabbing {
+    public virtual bool IsHolding {
       get {
         ensureUpToDate();
-        return _isHolding;
+        return IsActive;
       }
     }
 
@@ -66,7 +85,7 @@ namespace Leap.Unity {
     /// Returns whether or not the value of IsPinching is different than the value reported during
     /// the previous frame.
     /// </summary>
-    public bool DidChangeFromLastFrame {
+    public virtual bool DidChangeFromLastFrame {
       get {
         ensureUpToDate();
         return _didChange;
@@ -74,29 +93,29 @@ namespace Leap.Unity {
     }
 
     /// <summary>
-    /// Returns whether or not the value of IsPinching changed to true between this frame and the previous.
+    /// Returns whether or not the value of IsHolding changed to true between this frame and the previous.
     /// </summary>
-    public bool DidStartGrab {
+    public virtual bool DidStartHold {
       get {
         ensureUpToDate();
-        return DidChangeFromLastFrame && IsGrabbing;
+        return DidChangeFromLastFrame && IsHolding;
       }
     }
 
     /// <summary>
-    /// Returns whether or not the value of IsPinching changed to false between this frame and the previous.
+    /// Returns whether or not the value of IsHolding changed to false between this frame and the previous.
     /// </summary>
-    public bool DidEndGrab {
+    public virtual bool DidRelease {
       get {
         ensureUpToDate();
-        return DidChangeFromLastFrame && !IsGrabbing;
+        return DidChangeFromLastFrame && !IsHolding;
       }
     }
 
     /// <summary>
     /// Returns the value of Time.time during the most recent pinch event.
     /// </summary>
-    public float LastGrabTime {
+    public float LastHoldTime {
       get {
         ensureUpToDate();
         return _lastHoldTime;
@@ -114,8 +133,8 @@ namespace Leap.Unity {
     }
 
     /// <summary>
-    /// Returns the position value of the detected pinch.  If a pinch is not currently being
-    /// detected, returns the most recent pinch position value.
+    /// Returns the position value of the detected pinch or grab.  If a pinch or grab is not currently being
+    /// detected, returns the most recent position value.
     /// </summary>
     public Vector3 Position {
       get {
@@ -123,10 +142,10 @@ namespace Leap.Unity {
         return _position;
       }
     }
-
+    public Vector3 LastActivePosition { get { return _lastPosition; } }
     /// <summary>
-    /// Returns the rotation value of the detected pinch.  If a pinch is not currently being
-    /// detected, returns the most recent pinch rotation value.
+    /// Returns the rotation value of the detected pinch or grab.  If a pinch or grab is not currently being
+    /// detected, returns the most recent rotation value.
     /// </summary>
     public Quaternion Rotation {
       get {
@@ -134,87 +153,38 @@ namespace Leap.Unity {
         return _rotation;
       }
     }
+    public Quaternion LastActiveRotation { get { return _lastRotation; } }
 
-    protected virtual void ensureUpToDate() {
-      if (Time.frameCount == _lastUpdateFrame || HandModel == null) {
-        return;
-      }
-      _lastUpdateFrame = Time.frameCount;
+    public Vector3 Direction { get { return _direction; } }
+    public Vector3 LastActiveDirection { get { return _lastDirection; } }
+    public Vector3 Normal { get { return _normal; } }
+    public Vector3 LastActiveNormal { get { return _lastNormal; } }
+    public float Distance { get { return _distance; } }
+    public float LastActiveDistance { get { return _lastDistance; } }
 
-      _didChange = false;
 
-      Hand hand = HandModel.GetLeapHand();
-
-      if (hand == null || !HandModel.IsTracked) {
-        changeState(false);
-        return;
-      }
-
-      float grabAngle = hand.GrabAngle * Constants.RAD_TO_DEG;
-            CurrentAngle = grabAngle;
-            CurrentStrength = hand.GrabStrength;
-
-      var fingers = hand.Fingers;
-      _position = hand.WristPosition.ToVector3();
-      Direction = Vector3.zero;
-      Distance = 0;
-      for (int i = 0; i < fingers.Count; i++) {
-        Finger finger = fingers[i];
-        _position += finger.TipPosition.ToVector3();
-        Distance += fingers[0].TipPosition.DistanceTo(finger.TipPosition);
-        if(i > 0) { //don't include thumb
-          Direction += finger.TipPosition.ToVector3();
-        }
-      }
-      _position /= 6.0f;
-      Distance /= 4;
-    
-      Direction = (Direction/4 - hand.WristPosition.ToVector3()).normalized;
-      Vector3 thumbToPinky = fingers[0].TipPosition.ToVector3() - fingers[4].TipPosition.ToVector3();
-      Normal = Vector3.Cross(Direction, thumbToPinky).normalized;
-      _rotation = Quaternion.LookRotation(Direction, Normal);
-
-      if (_isHolding) {
-        if (grabAngle < DeactivateValue) {
-          changeState(false);
-          return;
-        }
+    protected virtual void changeState(bool shouldBeActive) {
+      bool currentState = IsActive;
+      if (shouldBeActive) {
+        _lastHoldTime = Time.time;
+        Activate();
       } else {
-        if (grabAngle > ActivateValue) {
-          changeState(true);
-        }
+        _lastReleaseTime = Time.time;
+        Deactivate();
       }
-
-      if (_isHolding) {
-        _position = Position;
-        _rotation = Rotation;
-      }
-    }
-
-    protected virtual void changeState(bool shouldBeHolding) {
-      if (_isHolding != shouldBeHolding) {
-        _isHolding = shouldBeHolding;
-
-        if (_isHolding) {
-          _lastHoldTime = Time.time;
-          Activate();
-        } else {
-          _lastReleaseTime = Time.time;
-          Deactivate();
-        }
-
+      if (currentState != IsActive) {
         _didChange = true;
       }
     }
 
     #if UNITY_EDITOR
-    void OnDrawGizmos () {
+    protected virtual void OnDrawGizmos () {
       if (ShowGizmos) {
         ensureUpToDate();
         Color centerColor;
-        Vector3 centerPosition = Position;
-        Quaternion circleRotation = Rotation;
-        if (IsGrabbing) {
+        Vector3 centerPosition = _position;
+        Quaternion circleRotation = _rotation;
+        if (IsHolding) {
           centerColor = Color.green;
         } else {
           centerColor = Color.red;

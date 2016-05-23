@@ -2,140 +2,9 @@
 
 namespace Leap.Unity {
 
-  public class GrabDetector : Detector {
+  public class GrabDetector : AbstractHoldDetector {
 
-    public IHandModel HandModel;
-    [Range(0, 180)]
-    public float ActivateGrabAngle = 110f; //degrees
-    [Range(0, 180)]
-    public float DeactivateGrabAngle = 90f; //degrees
-    public float CurrentAngle;
-    public float CurrentStrength;
-
-    public Vector3 GrabCenter { get; private set; }
-    public Quaternion GrabRotation { get; private set; }
-    public Vector3 GrabForward = Vector3.forward;
-    public Vector3 GrabNormal = Vector3.up;
-    public float GrabSize;
-
-    protected int _lastUpdateFrame = -1;
-
-    protected bool _isGrabbing = false;
-    protected bool _didChange = false;
-
-    protected float _lastGrabTime = 0.0f;
-    protected float _lastUngrabTime = 0.0f;
-
-    protected Vector3 _grabPos;
-    protected Quaternion _grabRotation;
-
-    protected virtual void OnValidate() {
-      ActivateGrabAngle = Mathf.Max(0, ActivateGrabAngle);
-      DeactivateGrabAngle = Mathf.Max(0, DeactivateGrabAngle);
-
-      //Activate angle cannot be less than deactivate angle
-      if (DeactivateGrabAngle > ActivateGrabAngle) {
-        DeactivateGrabAngle = ActivateGrabAngle;
-      }
-    }
-
-    protected virtual void Awake() {
-      if (HandModel == null) {
-        HandModel = gameObject.GetComponentInParent<IHandModel>();
-      }
-    }
-
-    protected virtual void Update() {
-      //We ensure the data is up to date at all times because
-      //there are some values (like LastPinchTime) that cannot
-      //be updated on demand
-      ensureGrabInfoUpToDate();
-    }
-
-    /// <summary>
-    /// Returns whether or not the dectector is currently detecting a pinch.
-    /// </summary>
-    public bool IsGrabbing {
-      get {
-        ensureGrabInfoUpToDate();
-        return _isGrabbing;
-      }
-    }
-
-    /// <summary>
-    /// Returns whether or not the value of IsPinching is different than the value reported during
-    /// the previous frame.
-    /// </summary>
-    public bool DidChangeFromLastFrame {
-      get {
-        ensureGrabInfoUpToDate();
-        return _didChange;
-      }
-    }
-
-    /// <summary>
-    /// Returns whether or not the value of IsPinching changed to true between this frame and the previous.
-    /// </summary>
-    public bool DidStartGrab {
-      get {
-        ensureGrabInfoUpToDate();
-        return DidChangeFromLastFrame && IsGrabbing;
-      }
-    }
-
-    /// <summary>
-    /// Returns whether or not the value of IsPinching changed to false between this frame and the previous.
-    /// </summary>
-    public bool DidEndGrab {
-      get {
-        ensureGrabInfoUpToDate();
-        return DidChangeFromLastFrame && !IsGrabbing;
-      }
-    }
-
-    /// <summary>
-    /// Returns the value of Time.time during the most recent pinch event.
-    /// </summary>
-    public float LastGrabTime {
-      get {
-        ensureGrabInfoUpToDate();
-        return _lastGrabTime;
-      }
-    }
-
-    /// <summary>
-    /// Returns the value of Time.time during the most recent unpinch event.
-    /// </summary>
-    public float LastReleaseTime {
-      get {
-        ensureGrabInfoUpToDate();
-        return _lastUngrabTime;
-      }
-    }
-
-    /// <summary>
-    /// Returns the position value of the detected pinch.  If a pinch is not currently being
-    /// detected, returns the most recent pinch position value.
-    /// </summary>
-    public Vector3 Position {
-      get {
-        ensureGrabInfoUpToDate();
-        return _grabPos;
-      }
-    }
-
-    /// <summary>
-    /// Returns the rotation value of the detected pinch.  If a pinch is not currently being
-    /// detected, returns the most recent pinch rotation value.
-    /// </summary>
-    public Quaternion Rotation {
-      get {
-        ensureGrabInfoUpToDate();
-        return _grabRotation;
-      }
-    }
-
-    protected virtual void ensureGrabInfoUpToDate() {
+    protected override void ensureUpToDate() {
       if (Time.frameCount == _lastUpdateFrame || HandModel == null) {
         return;
       }
@@ -146,75 +15,62 @@ namespace Leap.Unity {
       Hand hand = HandModel.GetLeapHand();
 
       if (hand == null || !HandModel.IsTracked) {
-        changeGrabState(false);
+        changeState(false);
         return;
       }
 
       float grabAngle = hand.GrabAngle * Constants.RAD_TO_DEG;
-            CurrentAngle = grabAngle;
-            CurrentStrength = hand.GrabStrength;
-
       var fingers = hand.Fingers;
-      GrabCenter = hand.WristPosition.ToVector3();
-      GrabForward = Vector3.zero;
-      GrabSize = 0;
+      _position = hand.WristPosition.ToVector3();
+      _direction = Vector3.zero;
+      _distance = 0;
       for (int i = 0; i < fingers.Count; i++) {
         Finger finger = fingers[i];
-        GrabCenter += finger.TipPosition.ToVector3();
-        GrabSize += fingers[0].TipPosition.DistanceTo(finger.TipPosition);
-        if(i > 0) { //don't include thumb
-          GrabForward += finger.TipPosition.ToVector3();
+        _position += finger.TipPosition.ToVector3();
+        _distance += fingers[0].TipPosition.DistanceTo(finger.TipPosition);
+        if(i > 0) { //don't include thumb in direction calculation
+          _direction += finger.TipPosition.ToVector3();
         }
       }
-      GrabCenter /= 6.0f;
-      GrabSize /= 4;
-    
-      GrabForward = (GrabForward/4 - hand.WristPosition.ToVector3()).normalized;
-      Vector3 thumbToPinky = fingers[0].TipPosition.ToVector3() - fingers[4].TipPosition.ToVector3();
-      GrabNormal = Vector3.Cross(GrabForward, thumbToPinky).normalized;
-      GrabRotation = Quaternion.LookRotation(GrabForward, GrabNormal);
+      _position /= 6.0f;
+      _distance /= 4;
 
-      if (_isGrabbing) {
-        if (grabAngle < DeactivateGrabAngle) {
-          changeGrabState(false);
-          return;
+      _direction = (_direction / 4 - hand.WristPosition.ToVector3()).normalized;
+      Vector3 thumbToPinky = fingers[0].TipPosition.ToVector3() - fingers[4].TipPosition.ToVector3();
+      _normal = Vector3.Cross(_direction, thumbToPinky).normalized;
+      _rotation = Quaternion.LookRotation(_direction, _normal);
+
+      if (IsActive) {
+        if (grabAngle < DeactivateValue) {
+          changeState(false);
         }
       } else {
-        if (grabAngle > ActivateGrabAngle) {
-          changeGrabState(true);
+        if (grabAngle > ActivateValue) {
+          changeState(true);
         }
       }
 
-      if (_isGrabbing) {
-        _grabPos = GrabCenter;
-        _grabRotation = GrabRotation;
+      if (IsActive) {
+        _lastPosition = _position;
+        _lastRotation = _rotation;
+        _lastDistance = _distance;
+        _lastDirection = _direction;
+        _lastNormal = _normal;
       }
-    }
-
-    protected virtual void changeGrabState(bool shouldBeGrabbing) {
-      if (_isGrabbing != shouldBeGrabbing) {
-        _isGrabbing = shouldBeGrabbing;
-
-        if (_isGrabbing) {
-          _lastGrabTime = Time.time;
-          Activate();
-        } else {
-          _lastUngrabTime = Time.time;
-          Deactivate();
-        }
-
-        _didChange = true;
+      if (ControlsTransform) {
+        transform.position = _lastPosition;
+        transform.rotation = _lastRotation;
       }
     }
 
     #if UNITY_EDITOR
-    void OnDrawGizmos () {
+    protected override void OnDrawGizmos () {
       if (ShowGizmos) {
-        ensureGrabInfoUpToDate();
+        ensureUpToDate();
         Color centerColor;
-        Vector3 centerPosition = GrabCenter;
-        Quaternion circleRotation = GrabRotation;
-        if (IsGrabbing) {
+        Vector3 centerPosition = _position;
+        Quaternion circleRotation = _rotation;
+        if (IsHolding) {
           centerColor = Color.green;
         } else {
           centerColor = Color.red;
@@ -222,9 +78,9 @@ namespace Leap.Unity {
         Vector3 axis;
         float angle;
         circleRotation.ToAngleAxis(out angle, out axis);
-        Utils.DrawCircle(centerPosition, GrabNormal, GrabSize / 2, centerColor);
-        Debug.DrawLine(centerPosition, centerPosition + GrabForward * GrabSize / 2, Color.grey);
-        Debug.DrawLine(centerPosition, centerPosition + GrabNormal * GrabSize / 2, Color.white);
+        Utils.DrawCircle(centerPosition, Normal, Distance / 2, centerColor);
+        Debug.DrawLine(centerPosition, centerPosition + Direction * Distance / 2, Color.grey);
+        Debug.DrawLine(centerPosition, centerPosition + Normal * Distance / 2, Color.white);
       }
     }
     #endif

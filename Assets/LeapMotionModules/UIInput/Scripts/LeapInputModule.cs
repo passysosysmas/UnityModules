@@ -653,9 +653,9 @@ namespace Leap.Unity.InputModule {
     public bool isTriggeringInteraction(int whichHand) {
 
       if (InteractionMode != InteractionCapability.Tactile) {
-        if ((curFrame.Hands[whichHand].IsRight) && (RightHandDetector != null && RightHandDetector.IsPinching) || (RightHandDetector == null && curFrame.Hands[whichHand].PinchDistance < PinchingThreshold)) {
+        if ((curFrame.Hands[whichHand].IsRight) && (RightHandDetector != null && RightHandDetector.IsActive) || (RightHandDetector == null && curFrame.Hands[whichHand].PinchDistance < PinchingThreshold)) {
           return true;
-        } else if ((curFrame.Hands[whichHand].IsLeft) && (LeftHandDetector != null && LeftHandDetector.IsPinching) || (LeftHandDetector == null && curFrame.Hands[whichHand].PinchDistance < PinchingThreshold)) {
+        } else if ((curFrame.Hands[whichHand].IsLeft) && (LeftHandDetector != null && LeftHandDetector.IsActive) || (LeftHandDetector == null && curFrame.Hands[whichHand].PinchDistance < PinchingThreshold)) {
           return true;
         }
       }
