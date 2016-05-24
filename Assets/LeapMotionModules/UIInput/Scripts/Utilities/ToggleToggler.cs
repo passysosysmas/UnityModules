@@ -16,11 +16,7 @@ namespace Leap.Unity.InputModule {
         image.color = OnColor;
       } else {
         text.text = "Off";
-<<<<<<< HEAD
-        text.color = new Color(0.3f, 0.3f, 0.3f);
-=======
         text.color = Color.black;
->>>>>>> refs/remotes/origin/develop
         image.color = OffColor;
       }
     }
