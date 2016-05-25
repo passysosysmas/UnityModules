@@ -9,6 +9,19 @@ namespace Leap.Unity {
   public class PinchDetector : AbstractHoldDetector {
     protected const float MM_TO_M = 0.001f;
 
+    public float ActivateDistance = .03f; //meters
+    public float DeactivateDistance = .04f; //meters
+
+    protected virtual void OnValidate() {
+      ActivateDistance = Mathf.Max(0, ActivateDistance);
+      DeactivateDistance = Mathf.Max(0, DeactivateDistance);
+
+      //Activate value cannot be less than deactivate value
+      if (DeactivateDistance < ActivateDistance) {
+        DeactivateDistance = ActivateDistance;
+      }
+    }
+
     protected override void ensureUpToDate() {
       if (Time.frameCount == _lastUpdateFrame) {
         return;
@@ -26,25 +39,15 @@ namespace Leap.Unity {
 
       _distance = hand.PinchDistance * MM_TO_M;
       _rotation = hand.Basis.CalculateRotation();
-
-      var fingers = hand.Fingers;
-      _position = Vector3.zero;
-      for (int i = 0; i < fingers.Count; i++) {
-        Finger finger = fingers[i];
-        if (finger.Type == Finger.FingerType.TYPE_INDEX ||
-          finger.Type == Finger.FingerType.TYPE_THUMB) {
-          _position += finger.Bone(Bone.BoneType.TYPE_DISTAL).NextJoint.ToVector3();
-        }
-      }
-      _position /= 2.0f;
+      _position = ((hand.Fingers[0].TipPosition + hand.Fingers[1].TipPosition) * .5f).ToVector3();
 
       if (IsActive) {
-        if (_distance > DeactivateValue) {
+        if (_distance > DeactivateDistance) {
           changeState(false);
           //return;
         }
       } else {
-        if (_distance < ActivateValue) {
+        if (_distance < ActivateDistance) {
           changeState(true);
         }
       }
@@ -85,8 +88,8 @@ namespace Leap.Unity {
         Vector3 axis;
         float angle;
         circleRotation.ToAngleAxis(out angle, out axis);
-        Utils.DrawCircle(centerPosition, axis, ActivateValue / 2, centerColor);
-        Utils.DrawCircle(centerPosition, axis, DeactivateValue / 2, Color.blue);
+        Utils.DrawCircle(centerPosition, axis, ActivateDistance / 2, centerColor);
+        Utils.DrawCircle(centerPosition, axis, DeactivateDistance / 2, Color.blue);
       }
     }
     #endif

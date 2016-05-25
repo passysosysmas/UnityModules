@@ -66,5 +66,12 @@ namespace Leap.Unity {
         OnDeactivate.Invoke();
       }
     }
+
+    //Gizmo colors
+    protected Color OnColor = Color.green;
+    protected Color OffColor = Color.red;
+    protected Color LimitColor = Color.blue;
+    protected Color DirectionColor = Color.white;
+    protected Color NormalColor = Color.gray;
   }
 }

@@ -1,8 +1,27 @@
 ﻿using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Leap.Unity {
 
   public class GrabDetector : AbstractHoldDetector {
+    public float Angle;
+
+    [Range(0, 180)]
+    public float ActivateAngle = 110; //degrees
+    [Range(0, 180)]
+    public float DeactivateAngle = 90; //degrees
+
+    protected virtual void OnValidate() {
+      ActivateAngle = Mathf.Max(0, ActivateAngle);
+      DeactivateAngle = Mathf.Max(0, DeactivateAngle);
+
+      //Activate value must be less than deactivate value
+      if (DeactivateAngle > ActivateAngle) {
+        DeactivateAngle = ActivateAngle;
+      }
+    }
 
     protected override void ensureUpToDate() {
       if (Time.frameCount == _lastUpdateFrame || HandModel == null) {
@@ -20,6 +39,7 @@ namespace Leap.Unity {
       }
 
       float grabAngle = hand.GrabAngle * Constants.RAD_TO_DEG;
+      Angle = grabAngle; //Debug
       var fingers = hand.Fingers;
       _position = hand.WristPosition.ToVector3();
       _direction = Vector3.zero;
@@ -41,11 +61,11 @@ namespace Leap.Unity {
       _rotation = Quaternion.LookRotation(_direction, _normal);
 
       if (IsActive) {
-        if (grabAngle < DeactivateValue) {
+        if (grabAngle < DeactivateAngle) {
           changeState(false);
         }
       } else {
-        if (grabAngle > ActivateValue) {
+        if (grabAngle > ActivateAngle) {
           changeState(true);
         }
       }
@@ -71,16 +91,27 @@ namespace Leap.Unity {
         Vector3 centerPosition = _position;
         Quaternion circleRotation = _rotation;
         if (IsHolding) {
-          centerColor = Color.green;
+          centerColor = OnColor;
         } else {
-          centerColor = Color.red;
+          centerColor = OffColor;
         }
         Vector3 axis;
         float angle;
         circleRotation.ToAngleAxis(out angle, out axis);
-        Utils.DrawCircle(centerPosition, Normal, Distance / 2, centerColor);
-        Debug.DrawLine(centerPosition, centerPosition + Direction * Distance / 2, Color.grey);
-        Debug.DrawLine(centerPosition, centerPosition + Normal * Distance / 2, Color.white);
+
+        float onAngle = ActivateAngle * 2;
+        float offAngle = onAngle + DeactivateAngle * 2;
+        float balance = 360 - onAngle;
+        Utils.DrawArcArb(0, ActivateAngle, centerPosition, Direction, Normal, Distance / 2, centerColor);
+        Utils.DrawArcArb(ActivateAngle, 360 - ActivateAngle * 2, centerPosition, Direction, Normal, Distance / 2, LimitColor);
+        Utils.DrawArcArb(360 - ActivateAngle * 2, ActivateAngle, centerPosition, Direction, Normal, Distance / 2, centerColor);
+
+        //Utils.DrawCircle(centerPosition, Normal, Distance / 2, centerColor);
+        //Utils.DrawCircle(centerPosition, Normal, Distance / 2, centerColor);
+        Debug.DrawLine(centerPosition, centerPosition + Direction * Distance / 2, DirectionColor);
+
+        Debug.DrawLine(centerPosition, centerPosition + Direction * Distance / 2, DirectionColor);
+        Debug.DrawLine(centerPosition, centerPosition + Normal * Distance / 2, NormalColor);
       }
     }
     #endif

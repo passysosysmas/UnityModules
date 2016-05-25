@@ -12,9 +12,6 @@ namespace Leap.Unity {
     protected IHandModel _handModel;
     public IHandModel HandModel { get { return _handModel; } set { _handModel = value; } }
 
-    public float ActivateValue; //degrees
-    public float DeactivateValue; //degrees
-
     /**
     * Whether the Transform of the object containing the PinchDetector script
     * is transformed by the Position and Rotation of the pinch when IsPinching is true.
@@ -41,15 +38,6 @@ namespace Leap.Unity {
     protected Vector3 _lastNormal = Vector3.up;
     protected float _lastDistance = 1.0f;
 
-    protected virtual void OnValidate() {
-      ActivateValue = Mathf.Max(0, ActivateValue);
-      DeactivateValue = Mathf.Max(0, DeactivateValue);
-
-      //Activate value cannot be less than deactivate value
-      if (DeactivateValue > ActivateValue) {
-        DeactivateValue = ActivateValue;
-      }
-    }
 
     protected virtual void Awake() {
       if (GetComponent<IHandModel>() != null && ControlsTransform == true) {
@@ -58,7 +46,7 @@ namespace Leap.Unity {
       if (_handModel == null) {
         _handModel = GetComponentInParent<IHandModel>();
         if (_handModel == null) {
-          Debug.LogWarning("The HandModel field of PinchDetector was unassigned and the detector has been disabled.");
+          Debug.LogWarning("The HandModel field of Detector was unassigned and the detector has been disabled.");
           enabled = false;
         }
       }
