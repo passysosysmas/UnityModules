@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System;
 using Leap;
 
 namespace Leap.Unity{
@@ -15,7 +16,11 @@ namespace Leap.Unity{
 
     protected override void HandFinish () {
       StopAllCoroutines();
-      StartCoroutine(changeStateNextTick(false));
+      try {
+        StartCoroutine(changeStateNextTick(false));
+      } catch (Exception e) {
+        gameObject.SetActive(false);
+      }
   	}
 
     /** Let child objects finish hierarchy modifications. */
