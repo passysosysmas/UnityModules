@@ -229,6 +229,7 @@ namespace Leap.Unity {
     protected void Start() {
       if (provider.IsConnected()) {
         deviceInfo = provider.GetDeviceInfo();
+        _shouldSetLocalPosition = true;
         LeapVRCameraControl.OnValidCameraParams += onValidCameraParams;
         if (deviceInfo.type == LeapDeviceType.Invalid) {
           Debug.LogWarning("Invalid Leap Device -> enabled = false");
@@ -250,8 +251,11 @@ namespace Leap.Unity {
       LeapVRCameraControl.OnValidCameraParams += onValidCameraParams;
     }
 
+    private bool _shouldSetLocalPosition = false;
     protected void OnDevice(object sender, DeviceEventArgs args) {
       deviceInfo = provider.GetDeviceInfo();
+      _shouldSetLocalPosition = true;
+
       if (deviceInfo.type == LeapDeviceType.Invalid) {
         Debug.LogWarning("Invalid Leap Device -> enabled = false");
         enabled = false;
@@ -278,6 +282,11 @@ namespace Leap.Unity {
     }
 
     protected void Update() {
+      if (_shouldSetLocalPosition) {
+        transform.localPosition = transform.forward * deviceInfo.focalPlaneOffset;
+        _shouldSetLocalPosition = false;
+      }
+
       if (Input.GetKeyDown(recenter) && VRSettings.enabled && VRDevice.isPresent) {
         InputTracking.Recenter();
       }
