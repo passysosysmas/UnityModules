@@ -20,6 +20,7 @@ namespace Leap.Unity
                 if (collisionInfo.impulse.magnitude > 0f) {
                     if (collisionInfo.collider.attachedRigidbody != null) {
                         collisionMass = collisionInfo.collider.attachedRigidbody.mass;
+                        GetComponent<Rigidbody>().mass = collisionMass;
                     }
                     lastcollision = Time.fixedTime;
                     isColliding = true;
