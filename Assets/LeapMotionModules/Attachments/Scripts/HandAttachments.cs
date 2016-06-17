@@ -125,6 +125,8 @@ namespace Leap.Unity{
         Vector3 thumbToPinky = fingers[0].TipPosition.ToVector3() - fingers[4].TipPosition.ToVector3();
         Vector3 GrabNormal = Vector3.Cross(GrabForward, thumbToPinky).normalized;
         GraspPoint.rotation = Quaternion.LookRotation(GrabForward, GrabNormal);
+
+        GraspPoint.position = GraspPoint.position - GrabNormal  * (1 -_hand.GrabStrength) * _hand.PalmWidth * .5f;
       }
     }
   }
