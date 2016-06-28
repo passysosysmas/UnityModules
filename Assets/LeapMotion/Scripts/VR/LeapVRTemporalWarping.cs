@@ -138,6 +138,9 @@ namespace Leap.Unity {
       get {
         return warpingAdjustment;
       }
+      set {
+        warpingAdjustment = (int)value;
+      }
     }
 
     private LeapDeviceInfo deviceInfo;
