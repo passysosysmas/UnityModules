@@ -58,6 +58,14 @@ namespace Leap.Unity
         private bool uncollideFarBones = true;
 
         [SerializeField]
+        [Tooltip("Detaches Hand.")]
+        private bool detachHand = false;
+
+        [SerializeField]
+        [Tooltip("Makes hand affected by gravity.")]
+        private bool useGravity = false;
+
+        [SerializeField]
         [Tooltip("If a segment displaces farther than this times its width, it will stop colliding if uncollideFarBones is set to true.")]
         private float uncollideThreshold = 2.0f;
 
@@ -180,7 +188,7 @@ namespace Leap.Unity
             palmBody = palmGameObject.GetComponent<Rigidbody>();
             palmBody.position = hand_.PalmPosition.ToVector3();
             palmBody.rotation = hand_.Basis.CalculateRotation();
-            palmBody.freezeRotation = true;
+            palmBody.freezeRotation = !detachHand;
             palmBody.useGravity = false;
 
             palmBody.mass = _perBoneMass * 3f;
@@ -231,7 +239,7 @@ namespace Leap.Unity
                     _capsuleBodies[boneArrayIndex] = body;
                     body.position = bone.Center.ToVector3();
                     body.rotation = bone.Rotation.ToQuaternion();
-                    body.useGravity = false;
+                    body.useGravity = useGravity;
                     if (!useConstraints) {
                         body.freezeRotation = true;
                     }
@@ -346,7 +354,10 @@ namespace Leap.Unity
             Vector3 palmDelta = hand_.PalmPosition.ToVector3() - palmBody.position;
 
             float massOfHand = palmBody.mass + (N_FINGERS * N_ACTIVE_BONES * _perBoneMass);
-            palmBody.velocity = (palmDelta / Time.fixedDeltaTime);
+            if(!detachHand){
+              palmBody.velocity = (palmDelta / Time.fixedDeltaTime);
+            }
+            palmBody.useGravity = useGravity;
             if (palmBody.freezeRotation) {
                 palmBody.MoveRotation(hand_.Basis.CalculateRotation());
             }

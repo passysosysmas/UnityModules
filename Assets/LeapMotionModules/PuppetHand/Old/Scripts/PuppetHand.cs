@@ -69,7 +69,7 @@ namespace Leap.Unity
                 for (int f = 0; f < fingers.Length; ++f) {
                     if (fingers[f] != null) {
                         //General Finger Options
-                        ((MotorizedFinger)fingers[f]).setParentofDigits(RigidbodyParent.transform, FingerMotorForce, FingerMotorSpeed, GetComponent<Rigidbody>().useGravity, !DisableMotors, FingerMass, hybridConstraints);
+                        ((MotorizedFinger)fingers[f]).setParentofDigits(RigidbodyParent.transform, FingerMotorForce, FingerMotorSpeed, GetComponent<Rigidbody>().useGravity, !DisableMotors, FingerMass, hybridConstraints, DetachHand);
 
                         DisableFingerCollisions();
                     }
@@ -90,10 +90,12 @@ namespace Leap.Unity
                     Physics.IgnoreCollision(fingers[f].bones[1].GetComponent<Collider>(), forearm.GetComponent<Collider>());
 
                     for (int i = 1; i < fingers[f].bones.Length; i++) {
+                      if (!DetachHand) {
                         foreach (Collider colliderr in kinematicColliders) {
-                            Physics.IgnoreCollision(palm.GetComponent<Collider>(), colliderr);
-                            Physics.IgnoreCollision(fingers[f].bones[i].GetComponent<Collider>(), colliderr);
+                          Physics.IgnoreCollision(palm.GetComponent<Collider>(), colliderr);
+                          Physics.IgnoreCollision(fingers[f].bones[i].GetComponent<Collider>(), colliderr);
                         }
+                      }
                         Physics.IgnoreCollision(fingers[f].bones[i].GetComponent<Collider>(), palm.GetComponent<Collider>());
                         for (int of = 0; of < fingers.Length; ++of) {
                             if (fingers[of] != null) {

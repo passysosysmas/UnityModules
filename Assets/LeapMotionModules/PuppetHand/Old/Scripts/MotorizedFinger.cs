@@ -23,6 +23,7 @@ namespace Leap.Unity
         private bool colliding = false;
 
         private bool usingConstraints = false;
+        private bool detach = false;
 
         private float timeOfCollision = 0f;
         private float resetPeriod = 1.5f;
@@ -180,8 +181,9 @@ namespace Leap.Unity
             PalmRot = rot;
         }
 
-        public void setParentofDigits(Transform parent, float strength, float speed, bool gravity, bool constraints, float mass, bool hybridConstraints)
+        public void setParentofDigits(Transform parent, float strength, float speed, bool gravity, bool constraints, float mass, bool hybridConstraints, bool detachHand)
         {
+          detach = detachHand;
             FingerStrength = strength;
             FingerSpeed = speed;
             useConstraints = constraints;
@@ -282,15 +284,17 @@ namespace Leap.Unity
                             //Vector3 transformedBonePos = bones[i - 1].TransformPoint(Quaternion.Inverse(GetBoneRotation(i - 1)) * (GetBoneCenter(i) - GetBoneCenter(i - 1)));
                             //Vector3 deltaToPrevBone = bones[i].position - bones[i-1].position;
 
+                          if(!detach){
                             Vector3 deltaVel = ((transformedBonePos - bones[i].position) / Time.fixedDeltaTime);
-                            deltaVel = Vector3.Lerp(boneBody.velocity, deltaVel, 1f);
+                            //deltaVel = Vector3.Lerp(boneBody.velocity, deltaVel, 1f);
                             boneBody.velocity = deltaVel.magnitude > 2f ? (deltaVel / deltaVel.magnitude) * 2f : deltaVel;
+                          }
                         //Set Velocity!
                         } else {
 
                                 Vector3 deltaVel = ((GetBoneCenter(i) - bones[i].position) / Time.fixedDeltaTime);
                                 //deltaVel = Vector3.Lerp(boneBody.velocity, deltaVel, 1f);
-                                boneBody.velocity = deltaVel.magnitude > 2f ? (deltaVel / deltaVel.magnitude) * 2f : deltaVel;
+                                //boneBody.velocity = deltaVel.magnitude > 2f ? (deltaVel / deltaVel.magnitude) * 2f : deltaVel;
                             /*
                             if (i > 1) {
                                 Vector3 transformedBonePos = bones[i - 1].TransformPoint(Quaternion.Inverse(GetBoneRotation(i - 1)) * (GetBoneCenter(i) - GetBoneCenter(i - 1)));

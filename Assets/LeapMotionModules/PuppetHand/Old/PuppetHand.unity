@@ -485,10 +485,10 @@ MonoBehaviour:
   FingerMotorForce: 1000
   FingerMotorSpeed: 50
   FingerMass: 3
-  DetachHand: 0
-  DisableSprings: 1
-  DisableMotors: 1
-  hybridConstraints: 1
+  DetachHand: 1
+  DisableSprings: 0
+  DisableMotors: 0
+  hybridConstraints: 0
 --- !u!1 &145693690
 GameObject:
   m_ObjectHideFlags: 0
@@ -7415,9 +7415,9 @@ MonoBehaviour:
   FingerMotorSpeed: 50
   FingerMass: 3
   DetachHand: 0
-  DisableSprings: 1
-  DisableMotors: 1
-  hybridConstraints: 1
+  DisableSprings: 0
+  DisableMotors: 0
+  hybridConstraints: 0
 --- !u!4 &2146837082
 Transform:
   m_ObjectHideFlags: 0

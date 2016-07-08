@@ -166,11 +166,11 @@ namespace Leap.Unity {
 
     Transform thumbBase = _jointSpheres[THUMB_BASE_INDEX];
 
-    Vector3 thumbBaseToPalm = thumbBase.position - hand_.PalmPosition.ToVector3();
-    mockThumbJointSphere.position = hand_.PalmPosition.ToVector3() + Vector3.Reflect(thumbBaseToPalm, hand_.Basis.xBasis.ToVector3().normalized);
+    //Vector3 thumbBaseToPalm = thumbBase.position - hand_.PalmPosition.ToVector3();
+    //mockThumbJointSphere.position = hand_.PalmPosition.ToVector3() + Vector3.Reflect(thumbBaseToPalm, hand_.Basis.xBasis.ToVector3().normalized);
 
-    //Vector3 thumbBaseToPalm = thumbBase.position - wristPos;
-    //mockThumbJointSphere.position = wristPos + Vector3.Reflect(thumbBaseToPalm, HandToVisualize.palm.right);
+    Vector3 thumbBaseToPalm = thumbBase.position - wristPos;
+    mockThumbJointSphere.position = wristPos + Vector3.Reflect(thumbBaseToPalm, HandToVisualize.palm.right);
   }
 
   private void updateArm() {
