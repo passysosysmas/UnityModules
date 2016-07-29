@@ -124,19 +124,6 @@ namespace Leap.Unity{
         PinchPoint.rotation = Quaternion.LookRotation(forward.ToVector3(), up.ToVector3());
       }
       if (GrabPoint != null) {
-        Vector GrabCenter = Vector.Zero;
-        for (int i = 0; i < _hand.Fingers.Count; i++) {
-          GrabCenter += _hand.Fingers[i].TipPosition;
-        }
-        Vector GrabForward = (_hand.Fingers[2].TipPosition - _hand.WristPosition).Normalized;
-        Vector thumbToPinky = _hand.Fingers[0].TipPosition - _hand.Fingers[4].TipPosition;
-        Vector GrabNormal = GrabForward.Cross(thumbToPinky).Normalized;
-
-        GrabCenter = GrabCenter / 5.0f;
-        GrabPoint.position = GrabCenter.ToVector3();
-        GrabPoint.rotation = Quaternion.LookRotation(GrabForward.ToVector3(), GrabNormal.ToVector3());
-      }
-      if(GraspPoint != null){
         var fingers = _hand.Fingers;
         Vector3 GrabCenter = _hand.WristPosition.ToVector3();
         Vector3 GrabForward = Vector3.zero;
@@ -147,13 +134,11 @@ namespace Leap.Unity{
             GrabForward += finger.TipPosition.ToVector3();
           }
         }
-        GraspPoint.position = GrabCenter / 6.0f;
+        GrabPoint.position = GrabCenter / 6.0f; //average between wrist and fingertips
         GrabForward = (GrabForward / 4 - _hand.WristPosition.ToVector3()).normalized;
         Vector3 thumbToPinky = fingers[0].TipPosition.ToVector3() - fingers[4].TipPosition.ToVector3();
         Vector3 GrabNormal = Vector3.Cross(GrabForward, thumbToPinky).normalized;
-        GraspPoint.rotation = Quaternion.LookRotation(GrabForward, GrabNormal);
-
-        GraspPoint.position = GraspPoint.position - GrabNormal  * (1 -_hand.GrabStrength) * _hand.PalmWidth * .5f;
+        GrabPoint.rotation = Quaternion.LookRotation(GrabForward, GrabNormal);
       }
     }
   }
