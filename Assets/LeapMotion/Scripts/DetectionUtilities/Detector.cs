@@ -21,7 +21,7 @@ namespace Leap.Unity {
    * 
    * @since 4.1.2
    */
-  public abstract class Detector : MonoBehaviour {
+  public class Detector : MonoBehaviour {
     /** The current detector state. 
      * @since 4.1.2 
      */
@@ -73,5 +73,6 @@ namespace Leap.Unity {
     protected Color LimitColor = Color.blue;
     protected Color DirectionColor = Color.white;
     protected Color NormalColor = Color.gray;
+
   }
 }

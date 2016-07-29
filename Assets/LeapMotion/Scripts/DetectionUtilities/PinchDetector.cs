@@ -11,6 +11,9 @@ namespace Leap.Unity {
 
     public float ActivateDistance = .03f; //meters
     public float DeactivateDistance = .04f; //meters
+    public bool IsPinching { get { return this.IsHolding; } }
+    public bool DidStartPinch { get { return this.DidStartHold; } }
+    public bool DidEndPinch { get { return this.DidRelease; } }
 
     protected virtual void OnValidate() {
       ActivateDistance = Mathf.Max(0, ActivateDistance);

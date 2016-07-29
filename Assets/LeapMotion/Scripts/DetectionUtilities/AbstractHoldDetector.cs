@@ -3,6 +3,13 @@ using System.Collections;
 using Leap;
 
 namespace Leap.Unity { 
+
+  /**
+  * A base class for implementing detectors that detect a holding pose of a hand.
+  *
+  * Such detectors might use the PinchStrength, PinchDistance, GrabStrength, or GrabAngle
+  * properties of the Hand or might use a more complex heuristic.
+  */
   public abstract class AbstractHoldDetector : Detector {
 
     /** Implementations must implement this method. */
@@ -13,8 +20,8 @@ namespace Leap.Unity {
     public IHandModel HandModel { get { return _handModel; } set { _handModel = value; } }
 
     /**
-    * Whether the Transform of the object containing the PinchDetector script
-    * is transformed by the Position and Rotation of the pinch when IsPinching is true.
+    * Whether the Transform of the object containing this Detector script
+    * is transformed by the Position and Rotation of the hand when IsHolding is true.
     *
     * If false, the Transform is not affected.
     */
