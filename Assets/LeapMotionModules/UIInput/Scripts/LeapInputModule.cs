@@ -28,8 +28,6 @@ namespace Leap.Unity.InputModule {
     public Sprite PointerSprite;
     [Tooltip("The material to be instantiated for your pointers during projective interaction.")]
     public Material PointerMaterial;
-    [Tooltip("The size of the pointer in world coordinates with respect to distance.")]
-    public AnimationCurve PointerScale = AnimationCurve.Linear(0f,0.1f,6f,1f);
     [Tooltip("The color of the pointer when it is hovering over blank canvas.")]
     [ColorUsageAttribute(true, false, 0, 8, 0.125f, 3)]
     public Color StandardColor = Color.white;
@@ -47,22 +45,8 @@ namespace Leap.Unity.InputModule {
     [Header(" Advanced Options")]
     [Tooltip("Whether or not to show Advanced Options in the Inspector.")]
     public bool ShowAdvancedOptions = false;
-    public enum InteractionCapability : int {
-      Hybrid,
-      Tactile,
-      Projective
-    };
-    [Tooltip("The interaction mode that the Input Module will use.")]
-    public InteractionCapability InteractionMode = InteractionCapability.Hybrid;
-    [Tooltip("The distance from the base of a UI element that interaction switches from Projective-Pointer based to Touch based.")]
-    public float ProjectiveToTactileTransitionDistance = 0.4f;
     [Tooltip("The distance from the base of a UI element that tactile interaction is triggered.")]
     public float TactilePadding = 0.005f;
-    [Tooltip("When not using a PinchDetector, the distance in mm that the tip of the thumb and forefinger should be to activate selection during projective interaction.")]
-    public float PinchingThreshold = 20f;
-    [Tooltip("Render the pointer onto the enviroment.")]
-    public bool EnvironmentPointer = false;
-
     [Tooltip("The sound that is played when the pointer transitions from canvas to element.")]
     public AudioClip BeginHoverSound;
     [Tooltip("The sound that is played when the pointer transitions from canvas to element.")]
@@ -94,6 +78,31 @@ namespace Leap.Unity.InputModule {
 
     [Tooltip("Whether or not to show unsupported Experimental Options in the Inspector.")]
     public bool ShowExperimentalOptions = false;
+    public enum InteractionCapability : int {
+      Hybrid,
+      Tactile,
+      Projective
+    };
+    [Tooltip("The interaction mode that the Input Module will be restricted to.")]
+    public InteractionCapability InteractionMode = InteractionCapability.Tactile;
+    [Tooltip("The distance from the base of a UI element that interaction switches from Projective-Pointer based to Touch based.")]
+    public float ProjectiveToTactileTransitionDistance = 0.4f;
+    [Tooltip("The size of the pointer in world coordinates with respect to the distance between the cursor and the camera.")]
+    public AnimationCurve PointerDistanceScale = AnimationCurve.Linear(0f, 0.1f, 6f, 1f);
+    [Tooltip("The size of the pointer in world coordinates with respect to the distance between the thumb and forefinger.")]
+    public AnimationCurve PointerPinchScale = AnimationCurve.Linear(30f, 0.6f, 70f, 1.1f);
+    [Tooltip("When not using a PinchDetector, the distance in mm that the tip of the thumb and forefinger should be to activate selection during projective interaction.")]
+    public float PinchingThreshold = 30f;
+    [Tooltip("Create a pointer for each finger.")]
+    public bool perFingerPointer = false;
+    [Tooltip("Render the pointer onto the enviroment.")]
+    public bool EnvironmentPointer = false;
+    [Tooltip("The event that is triggered while pinching to a point in the environment.")]
+    public PositionEvent environmentPinch;
+    [Tooltip("Render a smaller pointer inside of the main pointer.")]
+    public bool InnerPointer = true;
+    [Tooltip("The Opacity of the Inner Pointer relative to the Primary Pointer.")]
+    public float InnerPointerOpacityScalar = 0.77f;
     [Tooltip("Trigger a Hover Event when switching between UI elements.")]
     public bool TriggerHoverOnElementSwitch = false;
     [Tooltip("If the ScrollView still doesn't work even after disabling RaycastTarget on the intermediate layers.")]
@@ -102,14 +111,13 @@ namespace Leap.Unity.InputModule {
     public bool DrawDebug = false;
     [Tooltip("Retract compressible widgets when not using Tactile Interaction.")]
     public bool RetractUI = false;
-    [Tooltip("Create a pointer for each finger.")]
-    public bool perFingerPointer = false;
 
     //Event related data
     private Camera EventCamera;
     private PointerEventData[] PointEvents;
     private pointerStates[] pointerState;
     private Transform[] Pointers;
+    private Transform[] InnerPointers;
     private LineRenderer[] PointerLines;
     private float ActivationTime = 0.1f;
 
@@ -119,6 +127,7 @@ namespace Leap.Unity.InputModule {
     //Values from the previous frame
     private pointerStates[] PrevState;
     private Vector2[] PrevScreenPosition;
+    private Vector2[] DragBeginPosition;
     private bool[] PrevTriggeringInteraction;
     private bool PrevTouchingMode;
     private GameObject[] prevOverGo;
@@ -168,9 +177,9 @@ namespace Leap.Unity.InputModule {
       EventCamera.transform.SetParent(this.transform);
 
       //Set the event camera of all currently existent Canvases to our Event Camera
-      canvases = GameObject.FindObjectsOfType<Canvas>();
-      foreach (Canvas canvas in canvases) {
-        canvas.worldCamera = EventCamera;
+      canvases = Resources.FindObjectsOfTypeAll<Canvas>();
+      for (int i = 0; i < canvases.Length; i++) {
+        canvases[i].worldCamera = EventCamera;
       }
 
       //Set Projective/Tactile Modes
@@ -185,6 +194,7 @@ namespace Leap.Unity.InputModule {
         NumberOfPointers = 10;
       }
       Pointers = new Transform[NumberOfPointers];
+      InnerPointers = new Transform[NumberOfPointers];
       PointerLines = new LineRenderer[NumberOfPointers];
       for (int index = 0; index < Pointers.Length; index++) {
         //Create the Canvas to render the Pointer on
@@ -208,7 +218,21 @@ namespace Leap.Unity.InputModule {
           Debug.LogError("Set PointerSprite on " + this.gameObject.name + " to the sprite you want to use as your pointer.", this.gameObject);
 
         Pointers[index] = pointer.GetComponent<Transform>();
+
+        if (InnerPointer) {
+          //Create the Canvas to render the Pointer on
+          GameObject innerPointer = new GameObject("Pointer " + index);
+          renderer = innerPointer.AddComponent<SpriteRenderer>();
+          renderer.sortingOrder = 1000;
+
+          //Add your sprite to the Canvas
+          renderer.sprite = PointerSprite;
+          renderer.material = Instantiate(PointerMaterial);
+
+          InnerPointers[index] = innerPointer.GetComponent<Transform>();
+        }
       }
+
 
       //Initialize our Sound Player
       SoundPlayer = this.gameObject.AddComponent<AudioSource>();
@@ -222,6 +246,7 @@ namespace Leap.Unity.InputModule {
       currentGoing = new GameObject[NumberOfPointers];
       PrevTriggeringInteraction = new bool[NumberOfPointers];
       PrevScreenPosition = new Vector2[NumberOfPointers];
+      DragBeginPosition = new Vector2[NumberOfPointers];
       PrevState = new pointerStates[NumberOfPointers];
       timeEnteredCanvas = new float[NumberOfPointers];
 
@@ -250,6 +275,7 @@ namespace Leap.Unity.InputModule {
 
     //Process is called by UI system to process events
     public override void Process() {
+      
       //Send update events if there is a selected object
       //This is important for InputField to receive keyboard events
       SendUpdateEventToSelectedObject();
@@ -258,22 +284,29 @@ namespace Leap.Unity.InputModule {
       for (int whichPointer = 0; whichPointer < NumberOfPointers; whichPointer++) {
         int whichHand;
         int whichFinger;
-        //Move on if this hand isn't visible in the frame
         if (perFingerPointer) {
           whichHand = whichPointer <= 4 ? 0 : 1;
           whichFinger = whichPointer <= 4 ? whichPointer : whichPointer - 5;
+          //Move on if this hand isn't visible in the frame
           if (curFrame.Hands.Count - 1 < whichHand){
             if(Pointers[whichPointer].gameObject.activeInHierarchy == true) {
               Pointers[whichPointer].gameObject.SetActive(false);
+              if (InnerPointer) {
+                InnerPointers[whichPointer].gameObject.SetActive(false);
+              }
             }
             continue;
           }
         }else {
           whichHand = whichPointer;
           whichFinger = 1;
+          //Move on if this hand isn't visible in the frame
           if (curFrame.Hands.Count - 1 < whichHand) {
             if (Pointers[whichPointer].gameObject.activeInHierarchy == true) {
               Pointers[whichPointer].gameObject.SetActive(false);
+              if (InnerPointer) {
+                InnerPointers[whichPointer].gameObject.SetActive(false);
+              }
             }
             continue;
           }
@@ -297,13 +330,13 @@ namespace Leap.Unity.InputModule {
           DebugSphereQueue.Enqueue(ProjectionOrigin);
           Debug.DrawRay(ProjectionOrigin, CurrentRotation * Vector3.forward * 5f);
         }
-
+        
         //Raycast from shoulder through tip of the index finger to the UI
         bool TipRaycast = false;
         if (InteractionMode != InteractionCapability.Projective) {
           TipRaycast = GetLookPointerEventData(whichPointer, whichHand, whichFinger, ProjectionOrigin, CurrentRotation * Vector3.forward, true);
           PrevState[whichPointer] = pointerState[whichPointer]; //Store old state for sound transitionary purposes
-          UpdatePointer(whichPointer, PointEvents[whichPointer]);
+          UpdatePointer(whichPointer, PointEvents[whichPointer], PointEvents[whichPointer].pointerCurrentRaycast.gameObject);
           ProcessState(whichPointer, whichHand, whichFinger, TipRaycast);
         }
 
@@ -313,19 +346,30 @@ namespace Leap.Unity.InputModule {
           if ((InteractionMode == InteractionCapability.Projective)) {
             PrevState[whichPointer] = pointerState[whichPointer]; //Store old state for sound transitionary purposes
           }
-          UpdatePointer(whichPointer, PointEvents[whichPointer]);
+          UpdatePointer(whichPointer, PointEvents[whichPointer], PointEvents[whichPointer].pointerCurrentRaycast.gameObject);
+          if (!TipRaycast && distanceOfTipToPointer(whichPointer, whichHand, whichPointer) < ProjectiveToTactileTransitionDistance) {
+            PointEvents[whichPointer].pointerCurrentRaycast = new RaycastResult();
+          }
           ProcessState(whichPointer, whichHand, whichFinger, TipRaycast);
         }
 
+        //Handle the Environment Pointer
         if ((EnvironmentPointer)&&(pointerState[whichPointer] == pointerStates.OffCanvas)) {
           Vector3 IndexMetacarpal = curFrame.Hands[whichHand].Fingers[whichFinger].Bone(Bone.BoneType.TYPE_METACARPAL).Center.ToVector3();
           RaycastHit EnvironmentSpot;
           Physics.Raycast(ProjectionOrigin, (IndexMetacarpal - ProjectionOrigin).normalized, out EnvironmentSpot);
           Pointers[whichPointer].position = EnvironmentSpot.point + (EnvironmentSpot.normal*0.01f);
           Pointers[whichPointer].rotation = Quaternion.LookRotation(EnvironmentSpot.normal);
+          if (InnerPointer) {
+            InnerPointers[whichPointer].position = EnvironmentSpot.point + (EnvironmentSpot.normal * 0.01f);
+            InnerPointers[whichPointer].rotation = Quaternion.LookRotation(EnvironmentSpot.normal);
+          }
           evaluatePointerSize(whichPointer);
-        }
 
+          if(isTriggeringInteraction(whichPointer, whichHand, whichFinger)){
+            environmentPinch.Invoke(Pointers[whichPointer].position);
+          }
+        }
 
         PrevScreenPosition[whichPointer] = PointEvents[whichPointer].position;
 
@@ -338,12 +382,13 @@ namespace Leap.Unity.InputModule {
         ProcessStateEvents(whichPointer);
         if ((PointEvents[whichPointer] != null)) {
           //Tell Leap Buttons how far away the finger is
-          if ((PointEvents[whichPointer].pointerCurrentRaycast.gameObject != null)) {
-            ILeapWidget comp = PointEvents[whichPointer].pointerCurrentRaycast.gameObject.GetComponent<ILeapWidget>();
+          GameObject Hoverer = ExecuteEvents.GetEventHandler<IPointerClickHandler>(PointEvents[whichPointer].pointerCurrentRaycast.gameObject);
+          if ((Hoverer != null)) {
+            ILeapWidget comp = Hoverer.GetComponent<ILeapWidget>();
             if (comp != null) {
-              if (!isTriggeringInteraction(whichPointer, whichHand, whichFinger)) {
-                ((ILeapWidget)comp).HoverDistance(distanceOfTipToPointer(whichPointer, whichHand, whichFinger));
-              }
+              //if (!isTriggeringInteraction(whichPointer, whichHand, whichFinger)) { //I forget why I put this here....
+              ((ILeapWidget)comp).HoverDistance(distanceOfTipToPointer(whichPointer, whichHand, whichFinger));
+              //}
             }
           }
 
@@ -369,6 +414,7 @@ namespace Leap.Unity.InputModule {
                 PointEvents[whichPointer].pressPosition = PointEvents[whichPointer].position;
                 PointEvents[whichPointer].pointerPressRaycast = PointEvents[whichPointer].pointerCurrentRaycast;
                 PointEvents[whichPointer].pointerPress = null; //Clear this for setting later
+                PointEvents[whichPointer].useDragThreshold = true;
 
                 //If we hit something good, let's trigger it!
                 if (currentOverGo[whichPointer] != null) {
@@ -388,8 +434,7 @@ namespace Leap.Unity.InputModule {
                     //We want to do "click on button down" at same time, unlike regular mouse processing
                     //Which does click when mouse goes up over same object it went down on
                     //This improves the user's ability to select small menu items
-                    ExecuteEvents.Execute(newPressed, PointEvents[whichPointer], ExecuteEvents.pointerClickHandler);
-
+                    //ExecuteEvents.Execute(newPressed, PointEvents[whichPointer], ExecuteEvents.pointerClickHandler);
                   }
 
                   if (newPressed != null) {
@@ -397,59 +442,111 @@ namespace Leap.Unity.InputModule {
                     currentGo[whichPointer] = newPressed;
 
                     //Select the currently pressed object
-                    if (ExecuteEvents.GetEventHandler<ISelectHandler>(currentGo[whichPointer])) {
+                    if (ExecuteEvents.GetEventHandler<IPointerClickHandler>(currentGo[whichPointer])) {
                       base.eventSystem.SetSelectedGameObject(currentGo[whichPointer]);
                     }
                   }
 
-                  ExecuteEvents.ExecuteHierarchy(currentGo[whichPointer], PointEvents[whichPointer], ExecuteEvents.beginDragHandler);
-                  PointEvents[whichPointer].pointerDrag = currentGo[whichPointer];
-                  PointEvents[whichPointer].dragging = true;
-                  currentGoing[whichPointer] = currentGo[whichPointer];
+                  //Debug.Log(currentGo[whichPointer].name);
+                  PointEvents[whichPointer].pointerDrag = ExecuteEvents.GetEventHandler<IDragHandler>(currentGo[whichPointer]);
+                  //Debug.Log(PointEvents[whichPointer].pointerDrag.name);
+
+                  if (PointEvents[whichPointer].pointerDrag) {
+                    IDragHandler Dragger = PointEvents[whichPointer].pointerDrag.GetComponent<IDragHandler>();
+                    if (Dragger != null) {
+                      if (Dragger is EventTrigger && PointEvents[whichPointer].pointerDrag.transform.parent) { //Hack: EventSystems intercepting Drag Events causing funkiness
+                         PointEvents[whichPointer].pointerDrag = ExecuteEvents.GetEventHandler<IDragHandler>(PointEvents[whichPointer].pointerDrag.transform.parent.gameObject);
+                         if (PointEvents[whichPointer].pointerDrag != null) {
+                           Dragger = PointEvents[whichPointer].pointerDrag.GetComponent<IDragHandler>();
+                           if ((Dragger != null) && !(Dragger is EventTrigger)) {
+                             currentGoing[whichPointer] = PointEvents[whichPointer].pointerDrag;
+                             DragBeginPosition[whichPointer] = PointEvents[whichPointer].position;
+                             if (currentGo[whichPointer] && currentGo[whichPointer] == currentGoing[whichPointer]) {
+                               ExecuteEvents.Execute(PointEvents[whichPointer].pointerDrag, PointEvents[whichPointer], ExecuteEvents.beginDragHandler);
+                               PointEvents[whichPointer].dragging = true;
+                             }
+                           }
+                         }
+                      } else {
+                        currentGoing[whichPointer] = PointEvents[whichPointer].pointerDrag;
+                        DragBeginPosition[whichPointer] = PointEvents[whichPointer].position;
+                        if (currentGo[whichPointer] && currentGo[whichPointer] == currentGoing[whichPointer]) {
+                          ExecuteEvents.Execute(PointEvents[whichPointer].pointerDrag, PointEvents[whichPointer], ExecuteEvents.beginDragHandler);
+                          PointEvents[whichPointer].dragging = true;
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
+          }
 
-            //If we WERE interacting last frame, but are not this frame...
-            if (PrevTriggeringInteraction[whichPointer] && !isTriggeringInteraction(whichPointer, whichHand, whichFinger)) {
-              PrevTriggeringInteraction[whichPointer] = false;
+          
+          //If we have dragged beyond the drag threshold
+          if (!PointEvents[whichPointer].dragging&&currentGoing[whichPointer] && Vector2.Distance(PointEvents[whichPointer].position, DragBeginPosition[whichPointer]) * 100f > EventSystem.current.pixelDragThreshold) {
+            IDragHandler Dragger = PointEvents[whichPointer].pointerDrag.GetComponent<IDragHandler>();
+            if (Dragger != null && Dragger is ScrollRect) {
+              if (currentGo[whichPointer] && !(currentGo[whichPointer].GetComponent<ScrollRect>())) {
+                ExecuteEvents.Execute(PointEvents[whichPointer].pointerDrag, PointEvents[whichPointer], ExecuteEvents.beginDragHandler);
+                PointEvents[whichPointer].dragging = true;
 
-              if (currentGoing[whichPointer]) {
-                ExecuteEvents.Execute(currentGoing[whichPointer], PointEvents[whichPointer], ExecuteEvents.endDragHandler);
-                if (currentOverGo[whichPointer] != null) {
-                  ExecuteEvents.ExecuteHierarchy(currentOverGo[whichPointer], PointEvents[whichPointer], ExecuteEvents.dropHandler);
-                }
-                PointEvents[whichPointer].pointerDrag = null;
-                PointEvents[whichPointer].dragging = false;
-                currentGoing[whichPointer] = null;
-              }
-              if (currentGo[whichPointer]) {
                 ExecuteEvents.Execute(currentGo[whichPointer], PointEvents[whichPointer], ExecuteEvents.pointerUpHandler);
                 PointEvents[whichPointer].rawPointerPress = null;
                 PointEvents[whichPointer].pointerPress = null;
                 currentGo[whichPointer] = null;
               }
             }
+          }
+          
 
-            //And for everything else, there is dragging.
-            if (currentGoing[whichPointer] != null) {
-              ExecuteEvents.Execute(currentGoing[whichPointer], PointEvents[whichPointer], ExecuteEvents.dragHandler);
+          //If we WERE interacting last frame, but are not this frame...
+          if (PrevTriggeringInteraction[whichPointer] && ((!isTriggeringInteraction(whichPointer, whichHand, whichFinger)) || (pointerState[whichPointer] == pointerStates.OffCanvas))) {
+            PrevTriggeringInteraction[whichPointer] = false;
+
+            if (currentGoing[whichPointer]) {
+              ExecuteEvents.Execute(currentGoing[whichPointer], PointEvents[whichPointer], ExecuteEvents.endDragHandler);
+              if ((currentGo[whichPointer]) && (currentGoing[whichPointer] == currentGo[whichPointer])) {
+                ExecuteEvents.Execute(currentGoing[whichPointer], PointEvents[whichPointer], ExecuteEvents.pointerUpHandler);
+              }
+              //Debug.Log(currentGoing[whichPointer].name);
+              if (currentOverGo[whichPointer] != null) {
+                ExecuteEvents.ExecuteHierarchy(currentOverGo[whichPointer], PointEvents[whichPointer], ExecuteEvents.dropHandler);
+              }
+              PointEvents[whichPointer].pointerDrag = null;
+              PointEvents[whichPointer].dragging = false;
+              currentGoing[whichPointer] = null;
+            }
+
+            if (currentGo[whichPointer]) {
+              ExecuteEvents.Execute(currentGo[whichPointer], PointEvents[whichPointer], ExecuteEvents.pointerUpHandler);
+              ExecuteEvents.Execute(currentGo[whichPointer], PointEvents[whichPointer], ExecuteEvents.pointerClickHandler);
+              PointEvents[whichPointer].rawPointerPress = null;
+              PointEvents[whichPointer].pointerPress = null;
+              currentGo[whichPointer] = null;
+              currentGoing[whichPointer] = null;
             }
           }
 
-          updatePointerColor(whichPointer);
+          //And for everything else, there is dragging.
+          if (PointEvents[whichPointer].pointerDrag != null && PointEvents[whichPointer].dragging) {
+            ExecuteEvents.Execute(PointEvents[whichPointer].pointerDrag, PointEvents[whichPointer], ExecuteEvents.dragHandler);
+          }
         }
+
+          updatePointerColor(whichPointer, whichHand, whichFinger);
+
 
         //Make the special Leap Widget Buttons Pop Up and Flatten when Appropriate
         if (PrevTouchingMode != getTouchingMode() && RetractUI) {
           PrevTouchingMode = getTouchingMode();
           if (PrevTouchingMode) {
-            foreach (Canvas canvas in canvases) {
-              canvas.BroadcastMessage("Expand", SendMessageOptions.DontRequireReceiver);
+            for (int i = 0; i < canvases.Length; i++) {
+              canvases[i].BroadcastMessage("Expand", SendMessageOptions.DontRequireReceiver);
             }
           } else {
-            foreach (Canvas canvas in canvases) {
-              canvas.BroadcastMessage("Retract", SendMessageOptions.DontRequireReceiver);
+            for (int i = 0; i < canvases.Length; i++) {
+              canvases[i].BroadcastMessage("Retract", SendMessageOptions.DontRequireReceiver);
             }
           }
         }
@@ -467,13 +564,13 @@ namespace Leap.Unity.InputModule {
       } else {
         PointEvents[whichPointer].Reset();
       }
-
+      
       //We're always going to assume we're "Left Clicking", for the benefit of uGUI
       PointEvents[whichPointer].button = PointerEventData.InputButton.Left;
 
       //If we're in "Touching Mode", Raycast through the fingers
       Vector3 IndexFingerPosition;
-      if (pointerState[whichPointer] == pointerStates.NearCanvas || pointerState[whichPointer] == pointerStates.TouchingCanvas || pointerState[whichPointer] == pointerStates.TouchingElement || forceTipRaycast) {
+      if (getTouchingMode(whichPointer) || forceTipRaycast) {
         TipRaycast = true;
         if (Camera.main != null) {
           EventCamera.transform.position = Camera.main.transform.position;
@@ -500,7 +597,7 @@ namespace Leap.Unity.InputModule {
         EventCamera.transform.position = Origin;
         IndexFingerPosition = curFrame.Hands[whichHand].Fingers[whichFinger].Bone(Bone.BoneType.TYPE_METACARPAL).Center.ToVector3();
       }
-
+      
       //Draw Camera Origin
       if (DrawDebug)
         DebugSphereQueue.Enqueue(EventCamera.transform.position);
@@ -512,24 +609,18 @@ namespace Leap.Unity.InputModule {
       PointEvents[whichPointer].position = Vector2.Lerp(PrevScreenPosition[whichPointer], EventCamera.WorldToScreenPoint(IndexFingerPosition), 1.0f);//new Vector2(Screen.width / 2, Screen.height / 2);
       PointEvents[whichPointer].delta = (PointEvents[whichPointer].position - PrevScreenPosition[whichPointer]) * -10f;
       PointEvents[whichPointer].scrollDelta = Vector2.zero;
-
+      
       //Perform the Raycast and sort all the things we hit by distance...
       base.eventSystem.RaycastAll(PointEvents[whichPointer], m_RaycastResultCache);
-      m_RaycastResultCache = m_RaycastResultCache.OrderBy(o => o.distance).ToList();
-
-      //If the Canvas and an Element are Z-Fighting, remove the Canvas from the runnings
-      if ((m_RaycastResultCache.Count > 1) && (m_RaycastResultCache[0].gameObject.GetComponent<Canvas>()) && (Mathf.Abs(m_RaycastResultCache[0].distance - m_RaycastResultCache[1].distance))<0.1f) {
-         m_RaycastResultCache.RemoveAt(0);
-      }
 
       //Optional hack that subverts ScrollRect hierarchies; to avoid this, disable "RaycastTarget" on the Viewport and Content panes
       if (OverrideScrollViewClicks) {
         PointEvents[whichPointer].pointerCurrentRaycast = new RaycastResult();
-        foreach (RaycastResult hit in m_RaycastResultCache) {
-          if (hit.gameObject.GetComponent<Scrollbar>() != null) {
-            PointEvents[whichPointer].pointerCurrentRaycast = hit;
-          } else if (PointEvents[whichPointer].pointerCurrentRaycast.gameObject == null && hit.gameObject.GetComponent<ScrollRect>() != null) {
-            PointEvents[whichPointer].pointerCurrentRaycast = hit;
+        for(int i = 0; i< m_RaycastResultCache.Count;i++){
+          if (m_RaycastResultCache[i].gameObject.GetComponent<Scrollbar>() != null) {
+            PointEvents[whichPointer].pointerCurrentRaycast = m_RaycastResultCache[i];
+          } else if (PointEvents[whichPointer].pointerCurrentRaycast.gameObject == null && m_RaycastResultCache[i].gameObject.GetComponent<ScrollRect>() != null) {
+            PointEvents[whichPointer].pointerCurrentRaycast = m_RaycastResultCache[i];
           }
         }
         if (PointEvents[whichPointer].pointerCurrentRaycast.gameObject == null) {
@@ -550,7 +641,7 @@ namespace Leap.Unity.InputModule {
       if ((PointEvents[whichPointer].pointerCurrentRaycast.gameObject != null)) {
         if (distanceOfTipToPointer(whichPointer, whichHand, whichFinger) < ProjectiveToTactileTransitionDistance) {
           if (isTriggeringInteraction(whichPointer, whichHand, whichFinger)) {
-            if (!PointEvents[whichPointer].pointerCurrentRaycast.gameObject.GetComponent<Canvas>()) {
+            if (ExecuteEvents.GetEventHandler<IPointerClickHandler>(PointEvents[whichPointer].pointerCurrentRaycast.gameObject)) {
               pointerState[whichPointer] = pointerStates.TouchingElement;
             } else {
               pointerState[whichPointer] = pointerStates.TouchingCanvas;
@@ -559,7 +650,7 @@ namespace Leap.Unity.InputModule {
             pointerState[whichPointer] = pointerStates.NearCanvas;
           }
         } else if (!forceTipRaycast) {
-          if (!PointEvents[whichPointer].pointerCurrentRaycast.gameObject.GetComponent<Canvas>()){// || PointEvents[whichPointer].dragging) {
+          if (ExecuteEvents.GetEventHandler<IPointerClickHandler>(PointEvents[whichPointer].pointerCurrentRaycast.gameObject)) {// || PointEvents[whichPointer].dragging) {
             if (isTriggeringInteraction(whichPointer, whichHand, whichFinger)) {
               pointerState[whichPointer] = pointerStates.PinchingToElement;
             } else {
@@ -658,17 +749,34 @@ namespace Leap.Unity.InputModule {
     }
 
     //Update the pointer location and whether or not it is enabled
-    private void UpdatePointer(int whichPointer, PointerEventData pointData) {
+    private void UpdatePointer(int whichPointer, PointerEventData pointData, GameObject UIComponent) {
+      if (EnvironmentPointer && pointerState[whichPointer] == pointerStates.OffCanvas) {
+        Pointers[whichPointer].gameObject.SetActive(true);
+        if (InnerPointer) { InnerPointers[whichPointer].gameObject.SetActive(true); }
+      }
       if (currentOverGo[whichPointer] != null) {
         Pointers[whichPointer].gameObject.SetActive(true);
+        if (InnerPointer) { InnerPointers[whichPointer].gameObject.SetActive(true);}
         if (PointEvents[whichPointer].pointerCurrentRaycast.gameObject != null) {
           RectTransform draggingPlane = PointEvents[whichPointer].pointerCurrentRaycast.gameObject.GetComponent<RectTransform>();
           Vector3 globalLookPos;
           if (RectTransformUtility.ScreenPointToWorldPointInRectangle(draggingPlane, pointData.position, pointData.enterEventCamera, out globalLookPos)) {
-            Pointers[whichPointer].position = globalLookPos;// -transform.forward * 0.01f; //Amount the pointer floats above the Canvas
+
+            GameObject Hoverer = ExecuteEvents.GetEventHandler<IPointerEnterHandler>(UIComponent);
+            if (Hoverer) {
+              Vector3 ComponentInPlane = Hoverer.transform.InverseTransformPoint(globalLookPos);
+              ComponentInPlane = new Vector3(ComponentInPlane.x, ComponentInPlane.y, 0f);
+              Pointers[whichPointer].position = Hoverer.transform.TransformPoint(ComponentInPlane);// -transform.forward * 0.01f; //Amount the pointer floats above the Canvas
+            } else {
+              Pointers[whichPointer].position = globalLookPos;
+            }
 
             float pointerAngle = Mathf.Rad2Deg * (Mathf.Atan2(pointData.delta.x, pointData.delta.y));
             Pointers[whichPointer].rotation = draggingPlane.rotation * Quaternion.Euler(0f, 0f, -pointerAngle);
+            if (InnerPointer) {
+              InnerPointers[whichPointer].position = globalLookPos;// -transform.forward * 0.01f; //Amount the pointer floats above the Canvas
+              InnerPointers[whichPointer].rotation = draggingPlane.rotation * Quaternion.Euler(0f, 0f, -pointerAngle);
+            }
             evaluatePointerSize(whichPointer);
           }
         }
@@ -683,9 +791,19 @@ namespace Leap.Unity.InputModule {
         PointDistance = (Pointers[whichPointer].position - Camera.main.transform.position).magnitude;
       }
 
-      float Pointerscale = PointerScale.Evaluate(PointDistance);
+      float Pointerscale = PointerDistanceScale.Evaluate(PointDistance);
 
-      //Commented out Velocity Stretching because it looks funny when I change the projection origin
+      if (InnerPointer) { InnerPointers[whichPointer].localScale = Pointerscale * PointerPinchScale.Evaluate(0f) * Vector3.one; }
+
+      if (!perFingerPointer && !getTouchingMode(whichPointer)) {
+        if (whichPointer == 0) {
+          Pointerscale *= PointerPinchScale.Evaluate(curFrame.Hands[0].PinchDistance);
+        } else if (whichPointer == 1) {
+          Pointerscale *= PointerPinchScale.Evaluate(curFrame.Hands[1].PinchDistance);
+        }
+      }
+
+      //Commented out Velocity Stretching because it looks funny when switching between Tactile and Projective
       Pointers[whichPointer].localScale = Pointerscale * new Vector3(1f, 1f /*+ pointData.delta.magnitude*1f*/, 1f);
     }
 
@@ -693,7 +811,7 @@ namespace Leap.Unity.InputModule {
     public bool isTriggeringInteraction(int whichPointer, int whichHand, int whichFinger) {
 
       if (InteractionMode != InteractionCapability.Projective) {
-        if ((pointerState[whichPointer] == pointerStates.NearCanvas || pointerState[whichPointer] == pointerStates.TouchingCanvas || pointerState[whichPointer] == pointerStates.TouchingElement)) {
+        if (getTouchingMode(whichPointer)) {
           return (distanceOfTipToPointer(whichPointer, whichHand, whichFinger) < 0f);
         }
       }
@@ -715,57 +833,70 @@ namespace Leap.Unity.InputModule {
     //The z position of the index finger tip to the Pointer
     public float distanceOfTipToPointer(int whichPointer, int whichHand, int whichFinger) {
       //Get Base of Index Finger Position
-      Vector3 IndexTipPosition = curFrame.Hands[whichHand].Fingers[whichFinger].Bone(Bone.BoneType.TYPE_DISTAL).NextJoint.ToVector3();
-      return (-Pointers[whichPointer].InverseTransformPoint(IndexTipPosition).z * Pointers[whichPointer].localScale.z) - TactilePadding;
+      Vector3 TipPosition = curFrame.Hands[whichHand].Fingers[whichFinger].Bone(Bone.BoneType.TYPE_DISTAL).NextJoint.ToVector3();
+      return (-Pointers[whichPointer].InverseTransformPoint(TipPosition).z * Pointers[whichPointer].lossyScale.z) - TactilePadding;
+    }
+
+    //The z position of the index finger tip to the Pointer
+    public float distanceOfTipToElement(Transform UIElement, int whichHand, int whichFinger) {
+      //Get Base of Index Finger Position
+      Vector3 TipPosition = curFrame.Hands[whichHand].Fingers[whichFinger].Bone(Bone.BoneType.TYPE_DISTAL).NextJoint.ToVector3();
+      return (-UIElement.InverseTransformPoint(TipPosition).z * UIElement.lossyScale.z) - TactilePadding;
     }
 
     public bool getTouchingMode() {
       bool mode = false;
-      foreach (pointerStates state in pointerState) {
-        if (state == pointerStates.NearCanvas || state == pointerStates.TouchingCanvas || state == pointerStates.TouchingElement) {
+      for (int i = 0; i < pointerState.Length; i++) {
+        if (pointerState[i] == pointerStates.NearCanvas || pointerState[i] == pointerStates.TouchingCanvas || pointerState[i] == pointerStates.TouchingElement) {
           mode = true;
         }
       }
       return mode;
     }
 
+    public bool getTouchingMode(int whichPointer) {
+      return (pointerState[whichPointer] == pointerStates.NearCanvas || pointerState[whichPointer] == pointerStates.TouchingCanvas || pointerState[whichPointer] == pointerStates.TouchingElement);
+    }
+
     //Where the color that the Pointer will lerp to is chosen
-    void updatePointerColor(int whichPointer) {
+    void updatePointerColor(int whichPointer, int whichHand, int whichFinger) {
+      float TransitionAmount = Mathf.Clamp01(Mathf.Abs((distanceOfTipToPointer(whichPointer, whichHand, whichFinger)-ProjectiveToTactileTransitionDistance))/0.05f);
+
       switch (pointerState[whichPointer]) {
         case pointerStates.OnCanvas:
-          lerpPointerColor(whichPointer, new Color(0f, 0f, 0f, 1f), 0.2f);
+          lerpPointerColor(whichPointer, new Color(0f, 0f, 0f, 1f * TransitionAmount), 0.2f);
           lerpPointerColor(whichPointer, StandardColor, 0.2f);
           break;
         case pointerStates.OnElement:
-          lerpPointerColor(whichPointer, new Color(0f, 0f, 0f, 1f), 0.2f);
+          lerpPointerColor(whichPointer, new Color(0f, 0f, 0f, 1f * TransitionAmount), 0.2f);
           lerpPointerColor(whichPointer, HoveringColor, 0.2f);
           break;
         case pointerStates.PinchingToCanvas:
-          lerpPointerColor(whichPointer, new Color(0f, 0f, 0f, 1f), 0.2f);
+          lerpPointerColor(whichPointer, new Color(0f, 0f, 0f, 1f * TransitionAmount), 0.2f);
           lerpPointerColor(whichPointer, TriggerMissedColor, 0.2f);
           break;
         case pointerStates.PinchingToElement:
-          lerpPointerColor(whichPointer, new Color(0f, 0f, 0f, 1f), 0.2f);
+          lerpPointerColor(whichPointer, new Color(0f, 0f, 0f, 1f * TransitionAmount), 0.2f);
           lerpPointerColor(whichPointer, TriggeringColor, 0.2f);
           break;
         case pointerStates.NearCanvas:
-          lerpPointerColor(whichPointer, new Color(0.0f, 0.0f, 0.0f, 0.5f), 0.3f);
+          lerpPointerColor(whichPointer, new Color(0.0f, 0.0f, 0.0f, 0.5f * TransitionAmount), 0.3f);
           lerpPointerColor(whichPointer, StandardColor, 0.2f);
           break;
         case pointerStates.TouchingElement:
-          lerpPointerColor(whichPointer, new Color(0.0f, 0.0f, 0.0f, 0.7f), 0.2f);
+          lerpPointerColor(whichPointer, new Color(0.0f, 0.0f, 0.0f, 0.7f * TransitionAmount), 0.2f);
           lerpPointerColor(whichPointer, TriggeringColor, 0.2f);
           break;
         case pointerStates.TouchingCanvas:
-          lerpPointerColor(whichPointer, new Color(0.0f, 0.01f, 0.0f, 0.5f), 0.2f);
+          lerpPointerColor(whichPointer, new Color(0.0f, 0.01f, 0.0f, 0.5f * TransitionAmount), 0.2f);
           lerpPointerColor(whichPointer, TriggerMissedColor, 0.2f);
           break;
         case pointerStates.OffCanvas:
           lerpPointerColor(whichPointer, TriggerMissedColor, 0.2f);
           if (EnvironmentPointer) {
-            lerpPointerColor(whichPointer, new Color(0.0f, 0.0f, 0.0f, 0.5f), 1f);
+            lerpPointerColor(whichPointer, new Color(0.0f, 0.0f, 0.0f, 0.5f*TransitionAmount), 1f);
           } else {
-            lerpPointerColor(whichPointer, new Color(0.0f, 0.0f, 0.0f, 0.0f), 1f);
+            lerpPointerColor(whichPointer, new Color(0.0f, 0.0f, 0.0f, 0.001f), 1f);
           }
           break;
       }
@@ -785,6 +916,21 @@ namespace Leap.Unity.InputModule {
       } else {
         PointerSprite.material.color = Color.Lerp(oldColor, color, lerpalpha);
         PointerSprite.color = Color.Lerp(oldColor, color, lerpalpha);
+      }
+
+      if (InnerPointer) {
+        SpriteRenderer InnerPointerSprite = InnerPointers[whichPointer].GetComponent<SpriteRenderer>();
+        oldColor = InnerPointerSprite.color;
+        if (color.r == 0f && color.g == 0f && color.b == 0f) {
+          InnerPointerSprite.material.color = Color.Lerp(oldColor, new Color(oldColor.r, oldColor.g, oldColor.b, color.a * InnerPointerOpacityScalar), lerpalpha);
+          InnerPointerSprite.color = Color.Lerp(oldColor, new Color(oldColor.r, oldColor.g, oldColor.b, color.a * InnerPointerOpacityScalar), lerpalpha);
+        } else if (color.a == 1f) {
+          InnerPointerSprite.material.color = Color.Lerp(oldColor, new Color(color.r, color.g, color.b, oldColor.a * InnerPointerOpacityScalar), lerpalpha);
+          InnerPointerSprite.color = Color.Lerp(oldColor, new Color(color.r, color.g, color.b, oldColor.a * InnerPointerOpacityScalar), lerpalpha);
+        } else {
+          InnerPointerSprite.material.color = Color.Lerp(oldColor, new Color(color.r, color.g, color.b, color.a * InnerPointerOpacityScalar), lerpalpha);
+          InnerPointerSprite.color = Color.Lerp(oldColor, new Color(color.r, color.g, color.b, color.a * InnerPointerOpacityScalar), lerpalpha);
+        }
       }
     }
 
