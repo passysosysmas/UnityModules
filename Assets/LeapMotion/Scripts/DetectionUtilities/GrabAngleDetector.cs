@@ -13,6 +13,9 @@ namespace Leap.Unity {
     [Range(0, 180)]
     public float DeactivateAngle = 90; //degrees
 
+    public float relaxDeltaAngle = 5; //degreess
+    private float _lastActiveAngle;
+
     protected virtual void OnValidate() {
       ActivateAngle = Mathf.Max(0, ActivateAngle);
       DeactivateAngle = Mathf.Max(0, DeactivateAngle);
@@ -61,7 +64,7 @@ namespace Leap.Unity {
       _rotation = Quaternion.LookRotation(_direction, _normal);
 
       if (IsActive) {
-        if (grabAngle < DeactivateAngle) {
+        if (grabAngle < DeactivateAngle || (_lastActiveAngle - grabAngle) > relaxDeltaAngle) {
           changeState(false);
         }
       } else {
@@ -81,6 +84,7 @@ namespace Leap.Unity {
         transform.position = _lastPosition;
         transform.rotation = _lastRotation;
       }
+      _lastActiveAngle = grabAngle;
     }
 
     #if UNITY_EDITOR

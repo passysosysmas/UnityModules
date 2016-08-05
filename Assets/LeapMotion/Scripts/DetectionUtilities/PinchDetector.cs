@@ -15,6 +15,9 @@ namespace Leap.Unity {
     public bool DidStartPinch { get { return this.DidStartHold; } }
     public bool DidEndPinch { get { return this.DidRelease; } }
 
+    public float relaxDeltaDistance = .005f; //meters
+    private float _lastActiveDistance;
+
     protected virtual void OnValidate() {
       ActivateDistance = Mathf.Max(0, ActivateDistance);
       DeactivateDistance = Mathf.Max(0, DeactivateDistance);
@@ -45,7 +48,7 @@ namespace Leap.Unity {
       _position = ((hand.Fingers[0].TipPosition + hand.Fingers[1].TipPosition) * .5f).ToVector3();
 
       if (IsActive) {
-        if (_distance > DeactivateDistance) {
+        if (_distance > DeactivateDistance || Mathf.Abs(_lastActiveDistance - _distance) > relaxDeltaDistance) {
           changeState(false);
           //return;
         }
@@ -66,6 +69,7 @@ namespace Leap.Unity {
         transform.position = _lastPosition;
         transform.rotation = _lastRotation;
       }
+      _lastActiveDistance = _distance;
     }
 
 #if UNITY_EDITOR

@@ -27,6 +27,13 @@ namespace Leap.Unity {
      *  @since 4.1.1
      */
     public bool IsActive = false;
+
+    /**
+    * Deactivate this attachment and any child objects when the attachment is disabled.
+    * When false, active attached objects will remain active when the hand reappears.
+    * @since 4.1.3
+    */
+    public bool DeactivateOnDisable = false;
     /**
      * A Transition played when the attachment is activated.
      *  @since 4.1.1
@@ -87,7 +94,8 @@ namespace Leap.Unity {
     }
 
     private void OnDisable(){
-      Deactivate(false);
+      if(DeactivateOnDisable)
+        Deactivate(false);
     }
   }
 }
