@@ -165,6 +165,10 @@ namespace Leap.Unity.Interaction {
     /// </summary>
     public void NotifyTeleported() {
       _notifiedOfTeleport = true;
+
+      // Start out in soft contact mode to limit explosions on teleported or initialization.
+      _dislocatedBrushCounter = 0;
+      updateContactMode();
     }
     #endregion
 

@@ -72,7 +72,7 @@ namespace Leap.Unity.Interaction {
       _handParent = new GameObject(gameObject.name);
       _handParent.transform.parent = null; // Prevent hand from moving when you turn your head.
 
-      _brushBones = new InteractionBrushBone[N_FINGERS * N_ACTIVE_BONES];
+      _brushBones = new InteractionBrushBone[N_FINGERS * N_ACTIVE_BONES + 1];
 
       for (int fingerIndex = 0; fingerIndex < N_FINGERS; fingerIndex++) {
         for (int jointIndex = 0; jointIndex < N_ACTIVE_BONES; jointIndex++) {
@@ -80,36 +80,56 @@ namespace Leap.Unity.Interaction {
           int boneArrayIndex = fingerIndex * N_ACTIVE_BONES + jointIndex;
 
           GameObject brushGameObject = new GameObject(gameObject.name, typeof(CapsuleCollider), typeof(Rigidbody), typeof(InteractionBrushBone));
-          brushGameObject.layer = gameObject.layer;
-          brushGameObject.transform.localScale = Vector3.one;
-
-          InteractionBrushBone brushBone = brushGameObject.GetComponent<InteractionBrushBone>();
-          brushBone.manager = _manager;
-          _brushBones[boneArrayIndex] = brushBone;
-
-          Transform capsuleTransform = brushGameObject.transform;
-          capsuleTransform.SetParent(_handParent.transform, false);
 
           CapsuleCollider capsule = brushGameObject.GetComponent<CapsuleCollider>();
           capsule.direction = 2;
           capsule.radius = bone.Width * 0.5f;
           capsule.height = bone.Length + bone.Width;
           capsule.material = _material;
-          brushBone.capsuleCollider = capsule;
 
-          Rigidbody body = brushGameObject.GetComponent<Rigidbody>();
-          brushBone.capsuleBody = body;
-          body.position = bone.Center.ToVector3();
-          body.rotation = bone.Rotation.ToQuaternion();
-          body.freezeRotation = true;
-          body.useGravity = false;
-
-          body.mass = _perBoneMass;
-          body.collisionDetectionMode = _collisionDetection;
-
-          brushBone.lastTarget = bone.Center.ToVector3();
+          InteractionBrushBone brushBone = BeginBone(bone, brushGameObject, boneArrayIndex, capsule);
         }
       }
+
+      {
+        // Palm is attached to the third metacarpal and derived from it.
+        Bone bone = _hand.Fingers[(int)Finger.FingerType.TYPE_MIDDLE].Bone(Bone.BoneType.TYPE_METACARPAL);
+        int boneArrayIndex = N_FINGERS * N_ACTIVE_BONES;
+        GameObject brushGameObject = new GameObject(gameObject.name, typeof(BoxCollider), typeof(Rigidbody), typeof(InteractionBrushBone));
+
+        BoxCollider box = brushGameObject.GetComponent<BoxCollider>();
+        box.center = new Vector3(0.0f, bone.Width * -0.3f, 0.0f);
+        box.size = new Vector3(bone.Length, bone.Width, bone.Length);
+        box.material = _material;
+
+        InteractionBrushBone brushBone = BeginBone(bone, brushGameObject, boneArrayIndex, box);
+      }
+    }
+
+    private InteractionBrushBone BeginBone(Bone bone, GameObject brushGameObject, int boneArrayIndex, Collider collider_) {
+      brushGameObject.layer = gameObject.layer;
+      brushGameObject.transform.localScale = Vector3.one;
+
+      InteractionBrushBone brushBone = brushGameObject.GetComponent<InteractionBrushBone>();
+      brushBone.lastTarget = bone.Center.ToVector3();
+      brushBone.collider = collider_;
+      brushBone.startTriggering();
+      brushBone.manager = _manager;
+      _brushBones[boneArrayIndex] = brushBone;
+
+      Transform capsuleTransform = brushGameObject.transform;
+      capsuleTransform.SetParent(_handParent.transform, false);
+
+      Rigidbody body = brushGameObject.GetComponent<Rigidbody>();
+      brushBone.rigidbody = body;
+      body.position = bone.Center.ToVector3();
+      body.rotation = bone.Rotation.ToQuaternion();
+      body.freezeRotation = true;
+      body.useGravity = false;
+      body.mass = _perBoneMass;
+      body.collisionDetectionMode = _collisionDetection;
+
+      return brushBone;
     }
 
     public override void UpdateHand() {
@@ -119,41 +139,51 @@ namespace Leap.Unity.Interaction {
 #endif
 
       float deadzone = DEAD_ZONE_FRACTION * _hand.Fingers[1].Bone((Bone.BoneType)1).Width;
-
       for (int fingerIndex = 0; fingerIndex < N_FINGERS; fingerIndex++) {
         for (int jointIndex = 0; jointIndex < N_ACTIVE_BONES; jointIndex++) {
           Bone bone = _hand.Fingers[fingerIndex].Bone((Bone.BoneType)(jointIndex + 1));
           int boneArrayIndex = fingerIndex * N_ACTIVE_BONES + jointIndex;
-          InteractionBrushBone brushBone = _brushBones[boneArrayIndex];
-          Rigidbody body = brushBone.capsuleBody;
-
-          // This hack works best when we set a fixed rotation for bones.  Otherwise
-          // most friction is lost as the bones roll on contact.
-          body.MoveRotation(bone.Rotation.ToQuaternion());
-
-          if (brushBone.updateTriggering() == false) {
-            // Calculate how far off the mark the brushes are.
-            float targetingError = (brushBone.lastTarget - body.position).magnitude / bone.Width;
-            float massScale = Mathf.Clamp(1.0f - (targetingError * 2.0f), 0.1f, 1.0f);
-            body.mass = _perBoneMass * massScale;
-
-            if (targetingError >= DISLOCATION_FRACTION) {
-              brushBone.startTriggering();
-            }
-          }
-
-          // Add a deadzone to avoid vibration.
-          Vector3 delta = bone.Center.ToVector3() - body.position;
-          float deltaLen = delta.magnitude;
-          if (deltaLen <= deadzone) {
-            body.velocity = Vector3.zero;
-            brushBone.lastTarget = body.position;
-          } else {
-            delta *= (deltaLen - deadzone) / deltaLen;
-            body.velocity = delta / Time.fixedDeltaTime;
-            brushBone.lastTarget = body.position + delta;
-          }
+          UpdateBone(bone, boneArrayIndex, deadzone);
         }
+      }
+
+      {
+        // Palm is attached to the third metacarpal.
+        Bone bone = _hand.Fingers[(int)Finger.FingerType.TYPE_MIDDLE].Bone(Bone.BoneType.TYPE_METACARPAL);
+        int boneArrayIndex = N_FINGERS * N_ACTIVE_BONES;
+        UpdateBone(bone, boneArrayIndex, deadzone);
+      }
+    }
+
+    private void UpdateBone(Bone bone, int boneArrayIndex, float deadzone) {
+      InteractionBrushBone brushBone = _brushBones[boneArrayIndex];
+      Rigidbody body = brushBone.rigidbody;
+
+      // This hack works best when we set a fixed rotation for bones.  Otherwise
+      // most friction is lost as the bones roll on contact.
+      body.MoveRotation(bone.Rotation.ToQuaternion());
+
+      if (brushBone.updateTriggering() == false) {
+        // Calculate how far off the mark the brushes are.
+        float targetingError = (brushBone.lastTarget - body.position).magnitude / bone.Width;
+        float massScale = Mathf.Clamp(1.0f - (targetingError * 2.0f), 0.1f, 1.0f);
+        body.mass = _perBoneMass * massScale;
+
+        if (targetingError >= DISLOCATION_FRACTION) {
+          brushBone.startTriggering();
+        }
+      }
+
+      // Add a deadzone to avoid vibration.
+      Vector3 delta = bone.Center.ToVector3() - body.position;
+      float deltaLen = delta.magnitude;
+      if (deltaLen <= deadzone) {
+        body.velocity = Vector3.zero;
+        brushBone.lastTarget = body.position;
+      } else {
+        delta *= (deltaLen - deadzone) / deltaLen;
+        body.velocity = delta / Time.fixedDeltaTime;
+        brushBone.lastTarget = body.position + delta;
       }
     }
 

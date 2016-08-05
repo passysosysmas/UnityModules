@@ -9,8 +9,8 @@ namespace Leap.Unity.Interaction {
 
     // Used by InteractionBrushHand:
     public InteractionManager manager;
-    public Rigidbody capsuleBody;
-    public CapsuleCollider capsuleCollider;
+    public Rigidbody rigidbody;
+    public Collider collider;
     public Vector3 lastTarget;
 
     // Once the brush becomes dislocated, it then remains dislocated until it
@@ -19,14 +19,14 @@ namespace Leap.Unity.Interaction {
     private int _dislocatedCounter = DISLOCATED_BRUSH_COOLDOWN;
 
     public void startTriggering() {
-      capsuleCollider.isTrigger = true;
+      collider.isTrigger = true;
       _dislocatedCounter = 0;
     }
 
     public bool updateTriggering() {
       if (_dislocatedCounter < DISLOCATED_BRUSH_COOLDOWN) {
         if (++_dislocatedCounter == DISLOCATED_BRUSH_COOLDOWN) {
-          capsuleCollider.isTrigger = false;
+          collider.isTrigger = false;
           return false;
         }
         return true;
