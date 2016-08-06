@@ -4,6 +4,7 @@ using UnityEngine.Events;
 using UnityEditor;
 #endif
 using System.Collections;
+using System.Collections.Generic;
 
 namespace Leap.Unity{
   
@@ -22,36 +23,45 @@ namespace Leap.Unity{
     public AnimationCurve ZRotation = new AnimationCurve(new Keyframe(-1, 1), new Keyframe(0, 0), new Keyframe(1, 1));
     public bool AnimateScale = false;
     public Vector3 OffScale = Vector3.one;
-    public AnimationCurve XScale = new AnimationCurve(new Keyframe(-1, 1), new Keyframe(0, 0), new Keyframe(1, 1));
-    public AnimationCurve YScale = new AnimationCurve(new Keyframe(-1, 1), new Keyframe(0, 0), new Keyframe(1, 1));
-    public AnimationCurve ZScale = new AnimationCurve(new Keyframe(-1, 1), new Keyframe(0, 0), new Keyframe(1, 1));
+    public AnimationCurve XScale = new AnimationCurve(new Keyframe(-1, 0), new Keyframe(0, 1), new Keyframe(1, 0));
+    public AnimationCurve YScale = new AnimationCurve(new Keyframe(-1, 0), new Keyframe(0, 1), new Keyframe(1, 0));
+    public AnimationCurve ZScale = new AnimationCurve(new Keyframe(-1, 0), new Keyframe(0, 1), new Keyframe(1, 0));
     public bool AnimateColor = false;
-    public Color OffColor = Color.grey;
-    public string ShaderColorName = "MainColor";
-    public AnimationCurve R = new AnimationCurve(new Keyframe(-1, 1), new Keyframe(0, 0), new Keyframe(1, 1));
-    public AnimationCurve G = new AnimationCurve(new Keyframe(-1, 1), new Keyframe(0, 0), new Keyframe(1, 1));
-    public AnimationCurve B = new AnimationCurve(new Keyframe(-1, 1), new Keyframe(0, 0), new Keyframe(1, 1));
-    public AnimationCurve A = new AnimationCurve(new Keyframe(-1, 1), new Keyframe(0, 0), new Keyframe(1, 1));
+    public Color OffColor = Color.black;
+    public AnimationCurve ColorCurve = new AnimationCurve(new Keyframe(-1, 1), new Keyframe(0, 0), new Keyframe(1, 1));
 
     [Range(.001f, 2.0f)]
     public float Duration = 0.5f; //seconds
     [Range (-1, 1)]
     public float Simulate = 0.0f;
     
-    private float Progress = 0.0f; 
-  
+    private float progress = 0.0f;
+    private List<Renderer> renderers = new List<Renderer>();
+    private List<Color> colors = new List<Color>();
+    private Vector3 localPosition;
+    private Quaternion localRotation;
+    private Vector3 localScale;
+
     public UnityEvent OnComplete;
 
   #if UNITY_EDITOR
-    void Update() {
+    private void Reset() {
+      captureInitialState();
+      Debug.Log("Reset.");
+    }
+    private void Update() {
       if (!EditorApplication.isPlaying) {
+        if(renderers.Count == 0) {
+          captureInitialState();
+        }
         updateTransition(Simulate);
       }
     }
   #endif
   
     private void Awake(){
-      updateTransition(1.0f);
+      updateTransition(0.0f);
+      captureInitialState();
     }
 
     public void TransitionIn(){
@@ -68,29 +78,64 @@ namespace Leap.Unity{
       }
     }
   
-    IEnumerator transitionIn(){
+    public void GotoOnState() {
+      restoreState();
+    }
+
+    protected void captureInitialState() {
+      if (AnimateColor) {
+        renderers.Clear();
+        Transform[] children = GetComponentsInChildren<Transform>(true);
+        for (int g = 0; g < children.Length; g++) {
+          Renderer renderer = children[g].gameObject.GetComponent<Renderer>();
+          if (renderer != null) {
+            renderers.Add(renderer);
+            renderer.sharedMaterial = new Material(renderer.sharedMaterial);
+            colors.Add(renderer.sharedMaterial.color);
+          }
+        }
+      }
+      localPosition = transform.localPosition;
+      localRotation = transform.localRotation;
+      localScale = transform.localScale;
+    }
+
+    protected void restoreState() {
+      transform.localPosition = localPosition;
+      transform.localRotation = localRotation;
+      transform.localScale = localScale;
+      if (AnimateColor) {
+        for (int r = 0; r < renderers.Count; r++) {
+          renderers[r].sharedMaterial.color = colors[r];
+        }
+      }
+    }
+
+    protected IEnumerator transitionIn(){
       float start = Time.time;
       do {
-        Progress = (Time.time - start)/Duration;
-        updateTransition(Progress - 1);
+        progress = (Time.time - start)/Duration;
+        updateTransition(progress - 1);
         yield return null;
-      } while(Progress <= 1);
-      Progress = 0;
+      } while(progress <= 1);
+      progress = 0;
+      restoreState();
       OnComplete.Invoke();
     }
-  
-    IEnumerator transitionOut(){
+
+    protected IEnumerator transitionOut(){
+      restoreState();
       float start = Time.time;
       do {
-        Progress = (Time.time - start)/Duration;
-        updateTransition(Progress);
+        progress = (Time.time - start)/Duration;
+        updateTransition(progress);
         yield return null;
-      } while(Progress <= 1);
-      Progress = 0;
+      } while(progress <= 1);
+      progress = 0;
       OnComplete.Invoke();
     }
-  
-    void updateTransition(float interpolationPoint){
+
+    protected void updateTransition(float interpolationPoint){
       if(AnimatePosition){
         Vector3 localPosition = transform.localPosition;
         localPosition.x = XPosition.Evaluate(interpolationPoint) * OffPosition.x;
@@ -106,16 +151,16 @@ namespace Leap.Unity{
       }
       if (AnimateScale) {
         Vector3 localScale = transform.localScale;
-        localScale.x = XScale.Evaluate(1 - interpolationPoint) * OffScale.x;
-        localScale.y = YScale.Evaluate(1 - interpolationPoint) * OffScale.y;
-        localScale.z = ZScale.Evaluate(1 - interpolationPoint) * OffScale.z;
+        localScale.x = XScale.Evaluate(interpolationPoint) * OffScale.x;
+        localScale.y = YScale.Evaluate(interpolationPoint) * OffScale.y;
+        localScale.z = ZScale.Evaluate(interpolationPoint) * OffScale.z;
         transform.localScale = localScale;
       }
       if (AnimateColor) {
-        Transform[] children = GetComponentsInChildren<Transform>(true);
-        for (int g = 0; g < children.Length; g++) {
-            Renderer renderer = children[g].gameObject.GetComponent<Renderer>();
-          Color current = renderer.material.color;
+        for (int r = 0; r < renderers.Count; r++) {
+          Renderer renderer = renderers[r];
+          Color original = colors[r];
+          renderer.sharedMaterial.color = Color.Lerp(original, OffColor, ColorCurve.Evaluate(interpolationPoint));
         }
 
       }
