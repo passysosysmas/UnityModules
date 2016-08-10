@@ -65,8 +65,8 @@ namespace Leap.Unity{
     private Chirality _handedness;
 
     /** 
-     * Whether to use this for right or left hands.
-     * @since 4.1.1
+     * Restrict this set of attachments to one hand or another. Set to
+     * Either if the attachment object can be used for both hands.
      */
     public override Chirality Handedness {
       get {
@@ -140,44 +140,6 @@ namespace Leap.Unity{
         Vector3 GrabNormal = Vector3.Cross(GrabForward, thumbToPinky).normalized;
         GrabPoint.rotation = Quaternion.LookRotation(GrabForward, GrabNormal);
       }
-    }
-
-    public override bool SupportsEditorPersistence() { return true; }
-
-    private void OnDrawGizmos() {
-      DrawDebugLines();
-    }
-
-    /** The colors used for each bone. */
-    protected Color[] colors = { Color.gray, Color.yellow, Color.cyan, Color.magenta };
-
-    /**
-    * Draws lines from elbow to wrist, wrist to palm, and normal to the palm.
-    * Also draws the orthogonal basis vectors for the pinch and grab points.
-    */
-    protected void DrawDebugLines() {
-      Hand hand = GetLeapHand();
-      Debug.DrawLine(hand.Arm.ElbowPosition.ToVector3(), hand.Arm.WristPosition.ToVector3(), Color.red); //Arm
-      Debug.DrawLine(hand.WristPosition.ToVector3(), hand.PalmPosition.ToVector3(), Color.white); //Wrist to palm line
-      Debug.DrawLine(hand.PalmPosition.ToVector3(), (hand.PalmPosition + hand.PalmNormal * hand.PalmWidth / 2).ToVector3(), Color.black); //Hand Normal
-      if(PinchPoint != null)
-        DrawBasis(PinchPoint.position, PinchPoint.GetLeapMatrix(), .01f); //Pinch basis
-      if(GrabPoint != null)
-        DrawBasis(GrabPoint.position, GrabPoint.GetLeapMatrix(), .01f); //Grab basis
-
-      for (int f = 0; f < 5; f++) { //Fingers
-        Finger finger = hand.Fingers[f];
-        for (int i = 0; i < 4; ++i) {
-          Bone bone = finger.Bone((Bone.BoneType)i);
-          Debug.DrawLine(bone.PrevJoint.ToVector3(), bone.PrevJoint.ToVector3() + bone.Direction.ToVector3() * bone.Length, colors[i]);
-        }
-      }
-    }
-
-    public void DrawBasis(Vector3 origin, LeapTransform basis, float scale) {
-      Debug.DrawLine(origin, origin + basis.xBasis.ToVector3() * scale, Color.red);
-      Debug.DrawLine(origin, origin + basis.yBasis.ToVector3() * scale, Color.green);
-      Debug.DrawLine(origin, origin + basis.zBasis.ToVector3() * scale, Color.blue);
     }
   }
 }

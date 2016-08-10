@@ -14,9 +14,19 @@ namespace Leap.Unity{
       gameObject.SetActive(true);
     }
 
-    protected override void HandFinish() {
-      gameObject.SetActive(false);
-    }
+    protected override void HandFinish () {
+      StopAllCoroutines();
+      try {
+        StartCoroutine(changeStateNextTick(false));
+      } catch (Exception e) {
+        gameObject.SetActive(false);
+      }
+  	}
 
+    /** Let child objects finish hierarchy modifications. */
+    private IEnumerator changeStateNextTick(bool state) {
+      yield return null;
+      gameObject.SetActive(state);
+    }
   }
 }

@@ -7,10 +7,10 @@ namespace Leap.Unity {
   /**
    * Controls activation and deactivation of child game objects, optionally using a transition.
    * 
-   * Call Activate() to enable all child objects. If a Transition is specified, it is applied
+   * Call Activate() to enable all child objects. If an InTransition is specified, it is applied
    * after enabling the children.
    * 
-   * Call Deactivate() to disable all child objects. If a Transition is specified, it is applied
+   * Call Deactivate() to disable all child objects. If an OutTransition is specified, it is applied
    * before the children are deactivated.
    * 
    * You can override ChangeChildState() for more sophisticated behavior.
@@ -18,8 +18,6 @@ namespace Leap.Unity {
    * Use with Detectors and a DetectorAndGate to turn on and off hand attachments based
    * on hand pose or other factors for which a detector class exists.
    * 
-   * Note: if your attached objects should always be visible, you can remove the AttachmentController
-   * or set both ActivateOnEnable and DeactivateOnDisable to true.
    * @since 4.1.1
    */
   public class AttachmentController : MonoBehaviour {
@@ -28,22 +26,14 @@ namespace Leap.Unity {
      * Reports whether this attachment is in an activated state or not.
      *  @since 4.1.1
      */
-    public bool IsActive {
-      get {
-        return _isActive;
-      }
-      set {
-        _isActive = value;
-      }
-    }
-    private bool _isActive = false;
+    public bool IsActive = false;
+
     /**
     * Activate child objects when the attachment is enabled.
     * When true, attached objects are enabled and activated when the 
     * hand appears.
     * @since 4.1.3
     */
-    [Tooltip("Activate child objects automatically without playing a transition")]
     public bool ActivateOnEnable = false;
 
     /**
@@ -51,14 +41,12 @@ namespace Leap.Unity {
     * When false, any currently active attached objects will remain active when the hand reappears.
     * @since 4.1.3
     */
-    [Tooltip("Deactivate child objects automatically without playing a transition")]
     public bool DeactivateOnDisable = true;
 
     /**
      * A Transition played when the attachment is activated or deactivated.
      *  @since 4.1.1
      */
-    [Tooltip("The transition to play when this attachment controller activates or deactivates")]
     public Transition Transition;
 
     /**
@@ -106,6 +94,7 @@ namespace Leap.Unity {
     protected virtual void ChangeChildState(){
       if(Transition != null){
         Transition.OnComplete.RemoveListener(ChangeChildState);
+        Transition.OnComplete.RemoveListener(ChangeChildState);
       }
       Transform[] children = GetComponentsInChildren<Transform>(true);
       for(int g = 0; g < children.Length; g++){
@@ -119,7 +108,6 @@ namespace Leap.Unity {
       if(DeactivateOnDisable)
         Deactivate(false);
     }
-
     private void OnEnable() {
       if (ActivateOnEnable)
         Activate(false);
