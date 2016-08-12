@@ -45,9 +45,15 @@ namespace Leap.Unity {
     [Tooltip("When true, this hand is repositioned according to the latest tracking data in OnPreCull; this visually cuts off a full frame of latency.")]
     public bool LateLatching = true;
 
-    public Mesh sphereMesh;
-    public Material sphereMaterial;
+    protected SkinnedMeshRenderer SkinnedHandMesh;
+    protected Mesh sphereMesh;
+    protected Material sphereMaterial;
     protected Frame lateFrame;
+    protected Matrix4x4 SkinnedMeshRendererTransform;
+    protected Matrix4x4 UpdateHandTransform;
+    protected Matrix4x4 LateLatchedHandTransform;
+    protected Vector3 UpdateHandPos;
+    protected Quaternion UpdateHandRot;
     public LeapServiceProvider provider;
 
     [Header("Values for Stored Start Pose")]
@@ -59,6 +65,10 @@ namespace Leap.Unity {
     private List<Vector3> localPositions = new List<Vector3>();
 
     public override void InitHand() {
+      SkinnedHandMesh = GetComponentInChildren<SkinnedMeshRenderer>();
+      sphereMesh = new Mesh();// SkinnedHandMesh.sharedMesh;
+      sphereMaterial = SkinnedHandMesh.sharedMaterial;
+
       UpdateHand();
     }
 
@@ -88,6 +98,14 @@ namespace Leap.Unity {
           fingers[i].UpdateFinger();
         }
       }
+
+      if (Application.isPlaying && SkinnedHandMesh.sharedMesh != null) {
+        SkinnedMeshRendererTransform = Matrix4x4.TRS(SkinnedHandMesh.transform.position, SkinnedHandMesh.transform.rotation, SkinnedHandMesh.transform.localScale);
+        //UpdateHandTransform = Matrix4x4.TRS(ModelPalmAtLeapWrist ? hand_.Arm.WristPosition.ToVector3() : hand_.PalmPosition.ToVector3(), CalculateRotation(hand_.Basis), Vector3.one);
+        UpdateHandPos = hand_.PalmPosition.ToVector3();
+        UpdateHandRot = CalculateRotation(hand_.Basis);
+        SkinnedHandMesh.BakeMesh(sphereMesh);
+      }
     }
 
     //These versions of GetPalmRotation & CalculateRotation return the opposite vector compared to LeapUnityExtension.CalculateRotation
@@ -103,7 +121,7 @@ namespace Leap.Unity {
       return Quaternion.identity;
     }
 
-    private Quaternion CalculateRotation(this LeapTransform trs) {
+    private Quaternion CalculateRotation(LeapTransform trs) {
       Vector3 up = trs.yBasis.ToVector3();
       Vector3 forward = trs.zBasis.ToVector3();
       return Quaternion.LookRotation(forward, up);
@@ -294,12 +312,19 @@ namespace Leap.Unity {
         }
         lateFrame = provider.CurrentFrame;
 
-        //Send off the Late Latched Hand
-        for (int i = 0; i < lateFrame.Hands.Count; i++) {
-          for (int j = 0; j < 5; j++) {
-            for (int k = 0; k < 4; k++) {
-              Graphics.DrawMesh(sphereMesh, Matrix4x4.TRS(lateFrame.Hands[i].Fingers[j].bones[k].NextJoint.ToVector3(), lateFrame.Hands[i].Fingers[j].bones[k].Rotation.ToQuaternion(), Vector3.one * 0.02f), sphereMaterial, 0);
-            }
+        //LateLatchedHandTransform = Matrix4x4.TRS(ModelPalmAtLeapWrist ? lateFrame.Hand(LeapID()).Arm.WristPosition.ToVector3() : lateFrame.Hand(LeapID()).PalmPosition.ToVector3(), CalculateRotation(lateFrame.Hand(LeapID()).Basis), Vector3.one);
+        if (lateFrame.Hand(LeapID()) != null) {
+          LateLatchedHandTransform = Matrix4x4.TRS((lateFrame.Hand(LeapID()).PalmPosition.ToVector3() - UpdateHandPos), Quaternion.identity, Vector3.one);
+          //Matrix4x4 LateLatchedHandRotation = Matrix4x4.TRS(Vector3.zero, Quaternion.Inverse(UpdateHandRot) * CalculateRotation(lateFrame.Hand(LeapID()).Basis), Vector3.one);
+
+          //Send off the Late Latched Hand
+          if (sphereMesh != null) {
+            Graphics.DrawMesh(sphereMesh, (LateLatchedHandTransform * SkinnedMeshRendererTransform), sphereMaterial, 0);
+            //for (int j = 0; j < 5; j++) {
+            //  for (int k = 0; k < 4; k++) {
+            //    Graphics.DrawMesh(sphereMesh, Matrix4x4.TRS(lateFrame.Hand(LeapID()).Fingers[j].bones[k].NextJoint.ToVector3(), lateFrame.Hand(LeapID()).Fingers[j].bones[k].Rotation.ToQuaternion(), Vector3.one * 0.01f), sphereMaterial, 0);
+            //  }
+            //}
           }
         }
       }
