@@ -47,6 +47,10 @@ namespace Leap.Unity {
     [SerializeField]
     protected long _interpolationDelay = 15;
 
+    protected float smoothedTrackingLatency = 16000f;
+    [HideInInspector]
+    public bool manualUpdateHasBeenCalledSinceUpdate = false;
+
     protected Controller leap_controller_;
 
     protected SmoothedFloat _fixedOffset = new SmoothedFloat();
@@ -142,7 +146,7 @@ namespace Leap.Unity {
 
         // TODO: Add baseline & offset when included in API
         // NOTE: Alternative is to use device type since all parameters are invariant
-        info.isEmbedded = devices[0].IsEmbedded;
+        //info.isEmbedded = devices[0].IsEmbedded
         info.horizontalViewAngle = devices[0].HorizontalViewAngle * Mathf.Rad2Deg;
         info.verticalViewAngle = devices[0].VerticalViewAngle * Mathf.Rad2Deg;
         info.trackingRange = devices[0].Range / 1000f;
@@ -194,11 +198,8 @@ namespace Leap.Unity {
       _fixedOffset.Update(Time.time - Time.fixedTime, Time.deltaTime);
 
       if (_useInterpolation) {
-        Int64 unityTime = (Int64)(Time.time * 1e6);
-        Int64 unityOffsetTime = unityTime - _interpolationDelay * 1000;
-        Int64 leapFrameTime = clockCorrelator.ExternalClockToLeapTime(unityOffsetTime);
-
-        leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, leapFrameTime);
+        smoothedTrackingLatency = Mathf.Min(Mathf.Lerp(smoothedTrackingLatency, (float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), 0.01f), 24000f);
+        leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, leap_controller_.Now() - (long)smoothedTrackingLatency - (_interpolationDelay * 1000));
       } else {
         leap_controller_.Frame(_untransformedUpdateFrame);
       }
@@ -208,6 +209,7 @@ namespace Leap.Unity {
 
         DispatchUpdateFrameEvent(_transformedUpdateFrame);
       }
+      manualUpdateHasBeenCalledSinceUpdate = false;
     }
 
     protected virtual void FixedUpdate() {
@@ -217,11 +219,8 @@ namespace Leap.Unity {
       }
 
       if (_useInterpolation) {
-        Int64 unityTime = (Int64)((Time.fixedTime + _fixedOffset.value) * 1e6);
-        Int64 unityOffsetTime = unityTime - _interpolationDelay * 1000;
-        Int64 leapFrameTime = clockCorrelator.ExternalClockToLeapTime(unityOffsetTime);
-
-        leap_controller_.GetInterpolatedFrame(_untransformedFixedFrame, leapFrameTime);
+        smoothedTrackingLatency = Mathf.Min(Mathf.Lerp(smoothedTrackingLatency, (float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), 0.01f), 24000f);
+        leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, leap_controller_.Now() - (long)smoothedTrackingLatency - (_interpolationDelay * 1000));
       } else {
         leap_controller_.Frame(_untransformedFixedFrame);
       }
@@ -231,6 +230,20 @@ namespace Leap.Unity {
 
         DispatchFixedFrameEvent(_transformedFixedFrame);
       }
+    }
+
+    public void ManuallyUpdateFrame(long temporalOffset = 0) {
+      if (_useInterpolation) {
+        smoothedTrackingLatency = Mathf.Min(Mathf.Lerp(smoothedTrackingLatency, (float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), 0.01f), 24000f);
+        leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, leap_controller_.Now() - (long)smoothedTrackingLatency - ((_interpolationDelay + temporalOffset) * 1000));
+      } else {
+        leap_controller_.Frame(_untransformedUpdateFrame);
+      }
+
+      if (_untransformedUpdateFrame != null) {
+        transformFrame(_untransformedUpdateFrame, _transformedUpdateFrame);
+      }
+      manualUpdateHasBeenCalledSinceUpdate = true;
     }
 
     protected virtual void OnDestroy() {

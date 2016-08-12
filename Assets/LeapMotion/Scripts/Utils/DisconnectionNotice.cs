@@ -48,17 +48,18 @@ namespace Leap.Unity{
     }
     
     /** Whether the controller is embedded in a keyboard or laptop.*/
+    /*
     bool IsEmbedded() {
       DeviceList devices = leap_controller_.Devices;
       if (devices.Count == 0)
         return false;
       return devices[0].IsEmbedded;
-    }
+    }*/
           
     void Update() {
-      if (embeddedReplacementImage != null && IsEmbedded()) {
-        GetComponent<UnityEngine.UI.Image>().sprite = embeddedReplacementImage;
-      }
+      //if (embeddedReplacementImage != null && IsEmbedded()) {
+      //  GetComponent<UnityEngine.UI.Image>().sprite = embeddedReplacementImage;
+      //}
   
       if (IsConnected())
         frames_disconnected_ = 0;
