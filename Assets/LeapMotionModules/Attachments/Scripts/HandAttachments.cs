@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
-using Leap;
-using Leap.Unity;
+using Leap.Unity.RuntimeGizmos;
+using System;
 
 namespace Leap.Unity.Attachments {
 
@@ -22,7 +22,7 @@ namespace Leap.Unity.Attachments {
   * hand poses.
   *  @since 4.1.1
   */
-  public class HandAttachments : IHandModel {
+  public class HandAttachments : IHandModel, IRuntimeGizmoComponent {
   
     /** The palm of the hand. */
     [Tooltip("The palm of the hand.")]
@@ -144,8 +144,8 @@ namespace Leap.Unity.Attachments {
 
     public override bool SupportsEditorPersistence() { return true; }
 
-    private void OnDrawGizmos() {
-      DrawDebugLines();
+    public void OnDrawRuntimeGizmos(RuntimeGizmoDrawer drawer) {
+      DrawDebugLines(drawer);
     }
 
     /** The colors used for each bone. */
@@ -155,29 +155,36 @@ namespace Leap.Unity.Attachments {
     * Draws lines from elbow to wrist, wrist to palm, and normal to the palm.
     * Also draws the orthogonal basis vectors for the pinch and grab points.
     */
-    protected void DrawDebugLines() {
+    protected void DrawDebugLines(RuntimeGizmoDrawer drawer) {
       Hand hand = GetLeapHand();
-      Debug.DrawLine(hand.Arm.ElbowPosition.ToVector3(), hand.Arm.WristPosition.ToVector3(), Color.red); //Arm
-      Debug.DrawLine(hand.WristPosition.ToVector3(), hand.PalmPosition.ToVector3(), Color.white); //Wrist to palm line
-      Debug.DrawLine(hand.PalmPosition.ToVector3(), (hand.PalmPosition + hand.PalmNormal * hand.PalmWidth / 2).ToVector3(), Color.black); //Hand Normal
+      drawer.color = Color.red;
+      drawer.DrawLine(hand.Arm.ElbowPosition.ToVector3(), hand.Arm.WristPosition.ToVector3()); //Arm
+      drawer.color = Color.white;
+      drawer.DrawLine(hand.WristPosition.ToVector3(), hand.PalmPosition.ToVector3()); //Wrist to palm line
+      drawer.color = Color.black;
+      drawer.DrawLine(hand.PalmPosition.ToVector3(), (hand.PalmPosition + hand.PalmNormal * hand.PalmWidth / 2).ToVector3()); //Hand Normal
       if(PinchPoint != null)
-        DrawBasis(PinchPoint.position, PinchPoint.GetLeapMatrix(), .01f); //Pinch basis
+        DrawBasis(drawer, PinchPoint.position, PinchPoint.GetLeapMatrix(), .01f); //Pinch basis
       if(GrabPoint != null)
-        DrawBasis(GrabPoint.position, GrabPoint.GetLeapMatrix(), .01f); //Grab basis
+        DrawBasis(drawer, GrabPoint.position, GrabPoint.GetLeapMatrix(), .01f); //Grab basis
 
       for (int f = 0; f < 5; f++) { //Fingers
         Finger finger = hand.Fingers[f];
         for (int i = 0; i < 4; ++i) {
           Bone bone = finger.Bone((Bone.BoneType)i);
-          Debug.DrawLine(bone.PrevJoint.ToVector3(), bone.PrevJoint.ToVector3() + bone.Direction.ToVector3() * bone.Length, colors[i]);
+          drawer.color = colors[i];
+          drawer.DrawLine(bone.PrevJoint.ToVector3(), bone.PrevJoint.ToVector3() + bone.Direction.ToVector3() * bone.Length);
         }
       }
     }
 
-    public void DrawBasis(Vector3 origin, LeapTransform basis, float scale) {
-      Debug.DrawLine(origin, origin + basis.xBasis.ToVector3() * scale, Color.red);
-      Debug.DrawLine(origin, origin + basis.yBasis.ToVector3() * scale, Color.green);
-      Debug.DrawLine(origin, origin + basis.zBasis.ToVector3() * scale, Color.blue);
+    public void DrawBasis(RuntimeGizmoDrawer drawer, Vector3 origin, LeapTransform basis, float scale) {
+      drawer.color = Color.red;
+      drawer.DrawLine(origin, origin + basis.xBasis.ToVector3() * scale);
+      drawer.color = Color.green;
+      drawer.DrawLine(origin, origin + basis.yBasis.ToVector3() * scale);
+      drawer.color = Color.blue;
+      drawer.DrawLine(origin, origin + basis.zBasis.ToVector3() * scale);
     }
   }
 }
