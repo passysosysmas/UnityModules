@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using Leap.Unity.Attributes;
+using Leap.Unity.RuntimeGizmos;
 
 namespace Leap.Unity {
   /**
@@ -19,7 +20,7 @@ namespace Leap.Unity {
    * 
    * @since 4.1.2
    */
-  public class FingerDirectionDetector : Detector {
+  public class FingerDirectionDetector : Detector, IRuntimeGizmoComponent {
     /**
      * The interval at which to check finger state.
      * @since 4.1.2
@@ -170,8 +171,7 @@ namespace Leap.Unity {
       }
     }
 
-  #if UNITY_EDITOR
-    private void OnDrawGizmos () {
+    public void OnDrawRuntimeGizmos(RuntimeGizmoDrawer drawer) {
       if (ShowGizmos && HandModel != null) {
         Color innerColor;
         if (IsActive) {
@@ -181,11 +181,11 @@ namespace Leap.Unity {
         }
         Finger finger = HandModel.GetLeapHand().Fingers[selectedFingerOrdinal()];
         Vector3 fingerDirection = finger.Bone(Bone.BoneType.TYPE_DISTAL).Direction.ToVector3();
-        Utils.DrawCone(finger.TipPosition.ToVector3(), fingerDirection, OnAngle, finger.Length, innerColor);
-        Utils.DrawCone(finger.TipPosition.ToVector3(), fingerDirection, OffAngle, finger.Length, Color.red);
-        Debug.DrawRay(finger.TipPosition.ToVector3(), selectedDirection(finger.TipPosition.ToVector3()), Color.grey);
+        Utils.DrawCone(drawer, finger.TipPosition.ToVector3(), fingerDirection, OnAngle, finger.Length, innerColor);
+        Utils.DrawCone(drawer, finger.TipPosition.ToVector3(), fingerDirection, OffAngle, finger.Length, Color.red);
+        drawer.color = Color.gray;
+        drawer.DrawRay(finger.TipPosition.ToVector3(), selectedDirection(finger.TipPosition.ToVector3()));
       }
     }
-  #endif
   }
 }

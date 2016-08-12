@@ -494,6 +494,13 @@ namespace Leap.Unity.RuntimeGizmos {
     }
 
     /// <summary>
+    /// Draws a gizmo ray that starts at the origin and travels along a direction.
+    /// </summary>
+    public void DrawRay(Vector3 origin, Vector3 direction) {
+      DrawLine(origin, origin + direction);
+    }
+
+    /// <summary>
     /// Draws a filled gizmo cube at the given position with the given size.
     /// </summary>
     public void DrawCube(Vector3 position, Vector3 size) {

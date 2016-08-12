@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 using Leap.Unity.Attributes;
+using Leap.Unity.RuntimeGizmos;
+using System;
 
 namespace Leap.Unity {
 
@@ -22,7 +24,7 @@ namespace Leap.Unity {
   * 
   * @since 4.1.2
   */
-  public class PalmDirectionDetector : Detector {
+  public class PalmDirectionDetector : Detector, IRuntimeGizmoComponent {
     /**
      * The interval at which to check palm direction.
      * @since 4.1.2
@@ -145,9 +147,8 @@ namespace Leap.Unity {
       }
     }
 
-    #if UNITY_EDITOR
-    private void OnDrawGizmos(){
-      if(ShowGizmos && HandModel != null){
+    public void OnDrawRuntimeGizmos(RuntimeGizmoDrawer drawer) {
+      if (ShowGizmos && HandModel != null) {
         Color centerColor;
         if (IsActive) {
           centerColor = Color.green;
@@ -155,12 +156,12 @@ namespace Leap.Unity {
           centerColor = Color.red;
         }
         Hand hand = HandModel.GetLeapHand();
-        Utils.DrawCone(hand.PalmPosition.ToVector3(), hand.PalmNormal.ToVector3(), OnAngle, hand.PalmWidth, centerColor, 8);
-        Utils.DrawCone(hand.PalmPosition.ToVector3(), hand.PalmNormal.ToVector3(), OffAngle, hand.PalmWidth, Color.blue, 8);
-        Debug.DrawRay(hand.PalmPosition.ToVector3(), selectedDirection(hand.PalmPosition.ToVector3()), Color.grey, 0, true);
+        Utils.DrawCone(drawer, hand.PalmPosition.ToVector3(), hand.PalmNormal.ToVector3(), OnAngle, hand.PalmWidth, centerColor, 8);
+        Utils.DrawCone(drawer, hand.PalmPosition.ToVector3(), hand.PalmNormal.ToVector3(), OffAngle, hand.PalmWidth, Color.blue, 8);
+        drawer.color = Color.grey;
+        drawer.DrawRay(hand.PalmPosition.ToVector3(), selectedDirection(hand.PalmPosition.ToVector3()));
       }
     }
-    #endif
   }
 
   /** 

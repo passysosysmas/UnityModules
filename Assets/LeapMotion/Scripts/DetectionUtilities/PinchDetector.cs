@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 using Leap.Unity.Attributes;
 using Leap.Unity.RuntimeGizmos;
-using System;
 
 namespace Leap.Unity {
 
