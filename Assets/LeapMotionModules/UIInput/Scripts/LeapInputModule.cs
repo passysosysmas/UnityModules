@@ -1,15 +1,13 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.VR;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
-using UnityEngine.Serialization;
 using System.Collections.Generic;
-using Leap.Unity;
-using Leap;
+using Leap.Unity.RuntimeGizmos;
+using System;
 
 namespace Leap.Unity.InputModule {
-  public class LeapInputModule : BaseInputModule {
+  public class LeapInputModule : BaseInputModule, IRuntimeGizmoComponent {
     //General Interaction Parameters
     [Header(" Interaction Setup")]
     [Tooltip("The current Leap Data Provider for the scene.")]
@@ -934,10 +932,10 @@ namespace Leap.Unity.InputModule {
       return data.used;
     }
 
-    void OnDrawGizmos() {
+    public void OnDrawRuntimeGizmos(RuntimeGizmoDrawer drawer) {
       if (DrawDebug) {
         while (DebugSphereQueue != null && DebugSphereQueue.Count > 0) {
-          Gizmos.DrawSphere(DebugSphereQueue.Dequeue(), 0.1f);
+          drawer.DrawSphere(DebugSphereQueue.Dequeue(), 0.1f);
         }
       }
     }
@@ -945,5 +943,7 @@ namespace Leap.Unity.InputModule {
     public override bool ShouldActivateModule() {
       return curFrame!=null && curFrame.Hands.Count > 0 && base.ShouldActivateModule();
     }
+
+    
   }
 }
