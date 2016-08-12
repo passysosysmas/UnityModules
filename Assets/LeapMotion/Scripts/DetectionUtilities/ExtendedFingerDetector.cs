@@ -2,6 +2,7 @@
 using System.Collections;
 using System;
 using Leap.Unity.Attributes;
+using Leap.Unity.RuntimeGizmos;
 
 namespace Leap.Unity {
 
@@ -18,7 +19,7 @@ namespace Leap.Unity {
    * 
    * @since 4.1.2
    */
-  public class ExtendedFingerDetector : Detector {
+  public class ExtendedFingerDetector : Detector, IRuntimeGizmoComponent {
     /**
      * The interval at which to check finger state.
      * @since 4.1.2
@@ -128,8 +129,7 @@ namespace Leap.Unity {
              (requiredState == PointingState.NotExtended && !finger.IsExtended);
     }
 
-    #if UNITY_EDITOR
-    void OnDrawGizmos () {
+    public void OnDrawRuntimeGizmos(RuntimeGizmoDrawer drawer) {
       if (ShowGizmos && HandModel != null) {
         PointingState[] state = { Thumb, Index, Middle, Ring, Pinky };
         Hand hand = HandModel.GetLeapHand();
@@ -139,18 +139,17 @@ namespace Leap.Unity {
           Finger finger = hand.Fingers[f];
           if (finger.IsExtended) extendedCount++;
           else notExtendedCount++;
-          if (matchFingerState(finger, state[f]) && 
-             (extendedCount <= MaximumExtendedCount) && 
+          if (matchFingerState(finger, state[f]) &&
+             (extendedCount <= MaximumExtendedCount) &&
              (extendedCount >= MinimumExtendedCount)) {
-            Gizmos.color = Color.green;
+            drawer.color = Color.green;
           } else {
-            Gizmos.color = Color.red;
+            drawer.color = Color.red;
           }
-          Gizmos.DrawWireSphere(finger.TipPosition.ToVector3(), finger.Width);
+          drawer.DrawWireSphere(finger.TipPosition.ToVector3(), finger.Width);
         }
       }
     }
-    #endif
   }
   
   /** Defines the settings for comparing extended finger states */
