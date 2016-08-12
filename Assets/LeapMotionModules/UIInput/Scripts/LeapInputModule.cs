@@ -4,7 +4,6 @@ using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
 using Leap.Unity.RuntimeGizmos;
-using System;
 
 namespace Leap.Unity.InputModule {
   public class LeapInputModule : BaseInputModule, IRuntimeGizmoComponent {
