@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using Leap.Unity.Attributes;
+using Leap.Unity.RuntimeGizmos;
 
 namespace Leap.Unity { 
 
@@ -9,7 +10,7 @@ namespace Leap.Unity {
   * Such detectors might use the PinchStrength, PinchDistance, GrabStrength, or GrabAngle
   * properties of the Hand or might use a more complex heuristic.
   */
-  public abstract class AbstractHoldDetector : Detector {
+  public abstract class AbstractHoldDetector : Detector, IRuntimeGizmoComponent {
 
     /** Implementations must implement this method. */
     protected abstract void ensureUpToDate();
@@ -171,9 +172,7 @@ namespace Leap.Unity {
         _didChange = true;
       }
     }
-
-    #if UNITY_EDITOR
-    protected virtual void OnDrawGizmos () {
+    public void OnDrawRuntimeGizmos(RuntimeGizmoDrawer drawer) {
       if (ShowGizmos) {
         ensureUpToDate();
         Color centerColor;
@@ -187,12 +186,12 @@ namespace Leap.Unity {
         Vector3 axis;
         float angle;
         circleRotation.ToAngleAxis(out angle, out axis);
-        Utils.DrawCircle(centerPosition, Normal, Distance / 2, centerColor);
-        Debug.DrawLine(centerPosition, centerPosition + Direction * Distance / 2, Color.grey);
-        Debug.DrawLine(centerPosition, centerPosition + Normal * Distance / 2, Color.white);
+        Utils.DrawCircle(drawer, centerPosition, Normal, Distance / 2, centerColor);
+        drawer.color = Color.grey;
+        drawer.DrawLine(centerPosition, centerPosition + Direction * Distance / 2);
+        drawer.color = Color.white;
+        drawer.DrawLine(centerPosition, centerPosition + Normal * Distance / 2);
       }
     }
-    #endif
-
   }
 }
