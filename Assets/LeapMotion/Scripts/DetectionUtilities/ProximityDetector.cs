@@ -2,7 +2,8 @@
 using UnityEngine.Events;
 using System.Collections;
 using System.Collections.Generic;
-using Leap;
+using Leap.Unity.RuntimeGizmos;
+using System;
 
 namespace Leap.Unity{
 
@@ -11,7 +12,7 @@ namespace Leap.Unity{
    * of one of the target objects.
    * @since 4.1.2
    */
-  public class ProximityDetector : Detector {
+  public class ProximityDetector : Detector, IRuntimeGizmoComponent {
     /**
      * The interval at which to check palm direction.
      * @since 4.1.2
@@ -152,18 +153,16 @@ namespace Leap.Unity{
       return (closestPoint - transform.position).sqrMagnitude;
     }
 
-    #if UNITY_EDITOR
-    void OnDrawGizmos(){
-      if(IsActive){
-        Gizmos.color = Color.green;
+    public void OnDrawRuntimeGizmos(RuntimeGizmoDrawer drawer) {
+      if (IsActive) {
+        drawer.color = Color.green;
       } else {
-        Gizmos.color = Color.red;
+        drawer.color = Color.red;
       }
-      Gizmos.DrawWireSphere(transform.position, OnDistance);
-      Gizmos.color = Color.blue;
-      Gizmos.DrawWireSphere(transform.position, OffDistance);
+      drawer.DrawWireSphere(transform.position, OnDistance);
+      drawer.color = Color.blue;
+      drawer.DrawWireSphere(transform.position, OffDistance);
     }
-    #endif
   }
 
   /**
