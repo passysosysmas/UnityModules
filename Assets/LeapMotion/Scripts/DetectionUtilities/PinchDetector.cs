@@ -1,5 +1,7 @@
 ﻿using UnityEngine;
 using Leap.Unity.Attributes;
+using Leap.Unity.RuntimeGizmos;
+using System;
 
 namespace Leap.Unity {
 
@@ -7,7 +9,7 @@ namespace Leap.Unity {
   /// A basic utility class to aid in creating pinch based actions.  Once linked with an IHandModel, it can
   /// be used to detect pinch gestures that the hand makes.
   /// </summary>
-  public class PinchDetector : AbstractHoldDetector {
+  public class PinchDetector : AbstractHoldDetector, IRuntimeGizmoComponent {
     protected const float MM_TO_M = 0.001f;
 
     public float ActivateDistance = .03f; //meters
@@ -88,8 +90,7 @@ namespace Leap.Unity {
       _lastActiveDistance = _distance;
     }
 
-#if UNITY_EDITOR
-    protected override void OnDrawGizmos () {
+    public void OnDrawRuntimeGizmos(RuntimeGizmoDrawer drawer) {
       if (ShowGizmos && _handModel != null) {
         Color centerColor = Color.clear;
         Vector3 centerPosition = Vector3.zero;
@@ -111,11 +112,9 @@ namespace Leap.Unity {
         Vector3 axis;
         float angle;
         circleRotation.ToAngleAxis(out angle, out axis);
-        Utils.DrawCircle(centerPosition, axis, ActivateDistance / 2, centerColor);
-        Utils.DrawCircle(centerPosition, axis, DeactivateDistance / 2, Color.blue);
+        Utils.DrawCircle(drawer, centerPosition, axis, ActivateDistance / 2, centerColor);
+        Utils.DrawCircle(drawer, centerPosition, axis, DeactivateDistance / 2, Color.blue);
       }
     }
-    #endif
-
   }
 }
