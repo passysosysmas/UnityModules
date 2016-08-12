@@ -35,7 +35,7 @@ namespace Leap.Unity {
      */
     [AutoFind(AutoFindLocations.Parents)]
     [Tooltip("The hand model to watch. Set automatically if detector is on a hand.")]
-    public IHandModel HandModel = null;  
+    public IHandModel HandModel = null;
 
     /**
      * The finger to compare to the specified direction.
@@ -94,21 +94,21 @@ namespace Leap.Unity {
 
     private IEnumerator watcherCoroutine;
 
-    private void OnValidate(){
-      if( OffAngle < OnAngle){
+    private void OnValidate() {
+      if (OffAngle < OnAngle) {
         OffAngle = OnAngle;
       }
     }
 
-    private void Awake () {
+    private void Awake() {
       watcherCoroutine = fingerPointingWatcher();
     }
 
-    private void OnEnable () {
+    private void OnEnable() {
       StartCoroutine(watcherCoroutine);
     }
-  
-    private void OnDisable () {
+
+    private void OnDisable() {
       StopCoroutine(watcherCoroutine);
       Deactivate();
     }
@@ -118,14 +118,14 @@ namespace Leap.Unity {
       Vector3 fingerDirection;
       Vector3 targetDirection;
       int selectedFinger = selectedFingerOrdinal();
-      while(true){
-        if(HandModel != null){
+      while (true) {
+        if (HandModel != null) {
           hand = HandModel.GetLeapHand();
-          if(hand != null){
+          if (hand != null) {
             targetDirection = selectedDirection(hand.Fingers[selectedFinger].TipPosition.ToVector3());
             fingerDirection = hand.Fingers[selectedFinger].Bone(Bone.BoneType.TYPE_DISTAL).Direction.ToVector3();
             float angleTo = Vector3.Angle(fingerDirection, targetDirection);
-            if(HandModel.IsTracked && angleTo <= OnAngle){
+            if (HandModel.IsTracked && angleTo <= OnAngle) {
               Activate();
             } else if (!HandModel.IsTracked || angleTo >= OffAngle) {
               Deactivate();
@@ -136,8 +136,8 @@ namespace Leap.Unity {
       }
     }
 
-    private Vector3 selectedDirection(Vector3 tipPosition){
-      switch(PointingType){
+    private Vector3 selectedDirection(Vector3 tipPosition) {
+      switch (PointingType) {
         case PointingType.RelativeToHorizon:
           Quaternion cameraRot = Camera.main.transform.rotation;
           float cameraYaw = cameraRot.eulerAngles.y;
@@ -154,8 +154,8 @@ namespace Leap.Unity {
       }
     }
 
-    private int selectedFingerOrdinal(){
-      switch(FingerName){
+    private int selectedFingerOrdinal() {
+      switch (FingerName) {
         case Finger.FingerType.TYPE_INDEX:
           return 1;
         case Finger.FingerType.TYPE_MIDDLE:
@@ -172,20 +172,32 @@ namespace Leap.Unity {
     }
 
     public void OnDrawRuntimeGizmos(RuntimeGizmoDrawer drawer) {
-      if (ShowGizmos && HandModel != null) {
-        Color innerColor;
-        if (IsActive) {
-          innerColor = Color.green;
-        } else {
-          innerColor = Color.blue;
-        }
-        Finger finger = HandModel.GetLeapHand().Fingers[selectedFingerOrdinal()];
-        Vector3 fingerDirection = finger.Bone(Bone.BoneType.TYPE_DISTAL).Direction.ToVector3();
-        Utils.DrawCone(drawer, finger.TipPosition.ToVector3(), fingerDirection, OnAngle, finger.Length, innerColor);
-        Utils.DrawCone(drawer, finger.TipPosition.ToVector3(), fingerDirection, OffAngle, finger.Length, Color.red);
-        drawer.color = Color.gray;
-        drawer.DrawRay(finger.TipPosition.ToVector3(), selectedDirection(finger.TipPosition.ToVector3()));
+      if (!ShowGizmos) {
+        return;
       }
+
+      if (HandModel == null) {
+        return;
+      }
+
+      Color innerColor;
+      if (IsActive) {
+        innerColor = Color.green;
+      } else {
+        innerColor = Color.blue;
+      }
+
+      Hand hand = HandModel.GetLeapHand();
+      if (hand == null) {
+        return;
+      }
+
+      Finger finger = hand.Fingers[selectedFingerOrdinal()];
+      Vector3 fingerDirection = finger.Bone(Bone.BoneType.TYPE_DISTAL).Direction.ToVector3();
+      Utils.DrawCone(drawer, finger.TipPosition.ToVector3(), fingerDirection, OnAngle, finger.Length, innerColor);
+      Utils.DrawCone(drawer, finger.TipPosition.ToVector3(), fingerDirection, OffAngle, finger.Length, Color.red);
+      drawer.color = Color.gray;
+      drawer.DrawRay(finger.TipPosition.ToVector3(), selectedDirection(finger.TipPosition.ToVector3()));
     }
   }
 }

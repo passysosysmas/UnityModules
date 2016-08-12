@@ -35,7 +35,7 @@ namespace Leap.Unity {
     [AutoFind(AutoFindLocations.Parents)]
     [Tooltip("The hand model to watch. Set automatically if detector is on a hand.")]
     public IHandModel HandModel = null;
-  
+
     /** The required thumb state. */
     public PointingState Thumb = PointingState.Either;
     /** The required index finger state. */
@@ -47,7 +47,7 @@ namespace Leap.Unity {
     /** The required pinky finger state. */
     public PointingState Pinky = PointingState.Either;
 
-    [Range(0,5)]
+    [Range(0, 5)]
     public int MinimumExtendedCount = 0;
     [Range(0, 5)]
     public int MaximumExtendedCount = 5;
@@ -57,7 +57,7 @@ namespace Leap.Unity {
     void OnValidate() {
       int required = 0, forbidden = 0;
       PointingState[] stateArray = { Thumb, Index, Middle, Ring, Pinky };
-      foreach(PointingState state in stateArray) {
+      foreach (PointingState state in stateArray) {
         switch (state) {
           case PointingState.Extended:
             required++;
@@ -72,29 +72,29 @@ namespace Leap.Unity {
         MaximumExtendedCount = Math.Min(5 - forbidden, MaximumExtendedCount);
         MaximumExtendedCount = Math.Max(required, MaximumExtendedCount);
       }
-    
+
     }
 
-    void Awake () {
+    void Awake() {
       watcherCoroutine = extendedFingerWatcher();
     }
-  
-    void OnEnable () {
+
+    void OnEnable() {
       StartCoroutine(watcherCoroutine);
     }
-  
-    void OnDisable () {
+
+    void OnDisable() {
       StopCoroutine(watcherCoroutine);
       Deactivate();
     }
-  
+
     IEnumerator extendedFingerWatcher() {
       Hand hand;
-      while(true){
+      while (true) {
         bool fingerState = false;
-        if(HandModel != null && HandModel.IsTracked){
+        if (HandModel != null && HandModel.IsTracked) {
           hand = HandModel.GetLeapHand();
-          if(hand != null){
+          if (hand != null) {
             fingerState = matchFingerState(hand.Fingers[0], Thumb)
               && matchFingerState(hand.Fingers[1], Index)
               && matchFingerState(hand.Fingers[2], Middle)
@@ -107,51 +107,61 @@ namespace Leap.Unity {
                 extendedCount++;
               }
             }
-            fingerState = fingerState && 
-                         (extendedCount <= MaximumExtendedCount) && 
+            fingerState = fingerState &&
+                         (extendedCount <= MaximumExtendedCount) &&
                          (extendedCount >= MinimumExtendedCount);
-            if(HandModel.IsTracked && fingerState){
+            if (HandModel.IsTracked && fingerState) {
               Activate();
-            } else if(!HandModel.IsTracked || !fingerState) {
+            } else if (!HandModel.IsTracked || !fingerState) {
               Deactivate();
             }
           }
-        } else if(IsActive){
+        } else if (IsActive) {
           Deactivate();
         }
         yield return new WaitForSeconds(Period);
       }
     }
 
-    private bool matchFingerState (Finger finger, PointingState requiredState) {
+    private bool matchFingerState(Finger finger, PointingState requiredState) {
       return (requiredState == PointingState.Either) ||
              (requiredState == PointingState.Extended && finger.IsExtended) ||
              (requiredState == PointingState.NotExtended && !finger.IsExtended);
     }
 
     public void OnDrawRuntimeGizmos(RuntimeGizmoDrawer drawer) {
-      if (ShowGizmos && HandModel != null) {
-        PointingState[] state = { Thumb, Index, Middle, Ring, Pinky };
-        Hand hand = HandModel.GetLeapHand();
-        int extendedCount = 0;
-        int notExtendedCount = 0;
-        for (int f = 0; f < 5; f++) {
-          Finger finger = hand.Fingers[f];
-          if (finger.IsExtended) extendedCount++;
-          else notExtendedCount++;
-          if (matchFingerState(finger, state[f]) &&
-             (extendedCount <= MaximumExtendedCount) &&
-             (extendedCount >= MinimumExtendedCount)) {
-            drawer.color = Color.green;
-          } else {
-            drawer.color = Color.red;
-          }
-          drawer.DrawWireSphere(finger.TipPosition.ToVector3(), finger.Width);
+      if (!ShowGizmos) {
+        return;
+      }
+      if (HandModel == null) {
+        return;
+      }
+
+      PointingState[] state = { Thumb, Index, Middle, Ring, Pinky };
+
+      Hand hand = HandModel.GetLeapHand();
+      if (hand == null) {
+        return;
+      }
+
+      int extendedCount = 0;
+      int notExtendedCount = 0;
+      for (int f = 0; f < 5; f++) {
+        Finger finger = hand.Fingers[f];
+        if (finger.IsExtended) extendedCount++;
+        else notExtendedCount++;
+        if (matchFingerState(finger, state[f]) &&
+           (extendedCount <= MaximumExtendedCount) &&
+           (extendedCount >= MinimumExtendedCount)) {
+          drawer.color = Color.green;
+        } else {
+          drawer.color = Color.red;
         }
+        drawer.DrawWireSphere(finger.TipPosition.ToVector3(), finger.Width);
       }
     }
   }
-  
+
   /** Defines the settings for comparing extended finger states */
-  public enum PointingState{Extended, NotExtended, Either}
+  public enum PointingState { Extended, NotExtended, Either }
 }
