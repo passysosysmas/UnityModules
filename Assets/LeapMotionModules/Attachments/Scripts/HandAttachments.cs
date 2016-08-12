@@ -156,6 +156,10 @@ namespace Leap.Unity.Attachments {
     */
     protected void DrawDebugLines(RuntimeGizmoDrawer drawer) {
       Hand hand = GetLeapHand();
+      if(hand == null) {
+        return;
+      }
+
       drawer.color = Color.red;
       drawer.DrawLine(hand.Arm.ElbowPosition.ToVector3(), hand.Arm.WristPosition.ToVector3()); //Arm
       drawer.color = Color.white;
