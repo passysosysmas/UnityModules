@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Leap;
+using Leap.Unity.Attributes;
 
 namespace Leap.Unity {
   /** This version of IHandModel supports a hand respresentation based on a skinned and jointed 3D model asset.*/
@@ -24,7 +25,7 @@ namespace Leap.Unity {
     [Tooltip("When True, hands will be put into a Leap editor pose near the LeapServiceProvider's transform.  When False, the hands will be returned to their Start Pose if it has been saved.")]
     [SerializeField]
     private bool setEditorLeapPose = true;
-    
+
     public bool SetEditorLeapPose {
       get { return setEditorLeapPose; }
       set {
@@ -42,7 +43,13 @@ namespace Leap.Unity {
     public Vector3 modelFingerPointing = new Vector3(0, 0, 0);
     public Vector3 modelPalmFacing = new Vector3(0, 0, 0);
     [Tooltip("When true, this hand is repositioned according to the latest tracking data in OnPreCull; this visually cuts off a full frame of latency.")]
-    public bool LateLatching;
+    public bool LateLatching = true;
+
+    public Mesh sphereMesh;
+    public Material sphereMaterial;
+    protected Frame lateFrame;
+    public LeapServiceProvider provider;
+
     [Header("Values for Stored Start Pose")]
     [SerializeField]
     private List<Transform> jointList = new List<Transform>();
@@ -62,8 +69,7 @@ namespace Leap.Unity {
       if (palm != null) {
         if (ModelPalmAtLeapWrist) {
           palm.position = GetWristPosition();
-        }
-        else {
+        } else {
           palm.position = GetPalmPosition();
           if (wristJoint) {
             wristJoint.position = GetWristPosition();
@@ -125,13 +131,13 @@ namespace Leap.Unity {
       setFingerPalmFacing();
     }
     /**Finds palm and finds root of each finger by name and assigns RiggedFinger scripts */
-    private void assignRiggedFingersByName(){
-      List<string> palmStrings = new List<string> { "palm"};
+    private void assignRiggedFingersByName() {
+      List<string> palmStrings = new List<string> { "palm" };
       List<string> thumbStrings = new List<string> { "thumb", "tmb" };
-      List<string> indexStrings = new List<string> { "index", "idx"};
-      List<string> middleStrings = new List<string> { "middle", "mid"};
-      List<string> ringStrings = new List<string> { "ring"};
-      List<string> pinkyStrings = new List<string> { "pinky", "pin"};
+      List<string> indexStrings = new List<string> { "index", "idx" };
+      List<string> middleStrings = new List<string> { "middle", "mid" };
+      List<string> ringStrings = new List<string> { "ring" };
+      List<string> pinkyStrings = new List<string> { "pinky", "pin" };
       //find palm by name
       //Transform palm = null;
       Transform thumb = null;
@@ -140,10 +146,9 @@ namespace Leap.Unity {
       Transform ring = null;
       Transform pinky = null;
       Transform[] children = transform.GetComponentsInChildren<Transform>();
-      if (palmStrings.Any(w => transform.name.ToLower().Contains(w))){
+      if (palmStrings.Any(w => transform.name.ToLower().Contains(w))) {
         base.palm = transform;
-      }
-      else{
+      } else {
         foreach (Transform t in children) {
           if (palmStrings.Any(w => t.name.ToLower().Contains(w)) == true) {
             base.palm = t;
@@ -219,8 +224,7 @@ namespace Leap.Unity {
 
       if (Handedness == Chirality.Left) {
         perpendicular = Vector3.Cross(side2, side1);
-      }
-      else perpendicular = Vector3.Cross(side1, side2);
+      } else perpendicular = Vector3.Cross(side1, side2);
       Vector3 calculatedPalmFacing = CalculateZeroedVector(perpendicular);
       return calculatedPalmFacing; //+works for Mixamo, -reversed LoPoly_Hands_Skeleton and Winston
     }
@@ -261,6 +265,43 @@ namespace Leap.Unity {
         Transform jointTrans = jointList[i];
         jointTrans.localRotation = localRotations[i];
         jointTrans.localPosition = localPositions[i];
+      }
+    }
+
+    //Late-Latching Functions
+    protected virtual void OnEnable() {
+      Camera.onPreCull -= LateEnqueueHandMesh;
+      Camera.onPreCull += LateEnqueueHandMesh;
+    }
+    protected virtual void OnDisable() {
+      Camera.onPreCull -= LateEnqueueHandMesh;
+    }
+    public void LateEnqueueHandMesh(Camera camera) {
+#if UNITY_EDITOR
+      //Hard-coded name of the camera used to generate the pre-render view
+      if (camera.gameObject.name == "PreRenderCamera") {
+        return;
+      }
+
+      bool isScenePreviewCamera = camera.gameObject.hideFlags == HideFlags.HideAndDontSave;
+      if (isScenePreviewCamera) {
+        return;
+      }
+#endif
+      if (LateLatching && Application.isPlaying) {
+        if (!provider.manualUpdateHasBeenCalledSinceUpdate) {
+          provider.ManuallyUpdateFrame();
+        }
+        lateFrame = provider.CurrentFrame;
+
+        //Send off the Late Latched Hand
+        for (int i = 0; i < lateFrame.Hands.Count; i++) {
+          for (int j = 0; j < 5; j++) {
+            for (int k = 0; k < 4; k++) {
+              Graphics.DrawMesh(sphereMesh, Matrix4x4.TRS(lateFrame.Hands[i].Fingers[j].bones[k].NextJoint.ToVector3(), lateFrame.Hands[i].Fingers[j].bones[k].Rotation.ToQuaternion(), Vector3.one * 0.02f), sphereMaterial, 0);
+            }
+          }
+        }
       }
     }
   }
