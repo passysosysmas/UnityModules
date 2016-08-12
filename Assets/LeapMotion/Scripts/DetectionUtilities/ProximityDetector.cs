@@ -3,7 +3,6 @@ using UnityEngine.Events;
 using System.Collections;
 using System.Collections.Generic;
 using Leap.Unity.RuntimeGizmos;
-using System;
 
 namespace Leap.Unity{
 
