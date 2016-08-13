@@ -50,6 +50,8 @@ namespace Leap.Unity {
     protected float smoothedTrackingLatency = 16000f;
     [HideInInspector]
     public bool manualUpdateHasBeenCalledSinceUpdate = false;
+    protected Vector3 warpedPosition;
+    protected Quaternion warpedRotation;
 
     protected Controller leap_controller_;
 
@@ -241,7 +243,7 @@ namespace Leap.Unity {
       }
 
       if (_untransformedUpdateFrame != null) {
-        transformFrame(_untransformedUpdateFrame, _transformedUpdateFrame);
+        transformFrame(_untransformedUpdateFrame, _transformedUpdateFrame, false);
       }
       manualUpdateHasBeenCalledSinceUpdate = true;
     }
@@ -311,14 +313,13 @@ namespace Leap.Unity {
       leap_controller_.Device -= onHandControllerConnect;
     }
 
-    protected void transformFrame(Frame source, Frame dest) {
+    protected void transformFrame(Frame source, Frame dest, bool resampleTemporalWarping = true) {
       LeapTransform leapTransform;
       if (_temporalWarping != null) {
-        Vector3 warpedPosition;
-        Quaternion warpedRotation;
-        _temporalWarping.TryGetWarpedTransform(LeapVRTemporalWarping.WarpedAnchor.CENTER, out warpedPosition, out warpedRotation, source.Timestamp);
-
-        warpedRotation = warpedRotation * transform.localRotation;
+        if (resampleTemporalWarping) {
+          _temporalWarping.TryGetWarpedTransform(LeapVRTemporalWarping.WarpedAnchor.CENTER, out warpedPosition, out warpedRotation, source.Timestamp);
+          warpedRotation = warpedRotation * transform.localRotation;
+        }
 
         leapTransform = new LeapTransform(warpedPosition.ToVector(), warpedRotation.ToLeapQuaternion(), transform.lossyScale.ToVector() * 1e-3f);
         leapTransform.MirrorZ();

@@ -46,14 +46,13 @@ namespace Leap.Unity {
     public bool LateLatching = true;
 
     protected SkinnedMeshRenderer SkinnedHandMesh;
-    protected Mesh sphereMesh;
-    protected Material sphereMaterial;
+    protected Mesh handMesh;
+    protected Material handMaterial;
     protected Frame lateFrame;
     protected Matrix4x4 SkinnedMeshRendererTransform;
-    protected Matrix4x4 UpdateHandTransform;
-    protected Matrix4x4 LateLatchedHandTransform;
-    protected Vector3 UpdateHandPos;
-    protected Quaternion UpdateHandRot;
+    protected Matrix4x4 LateLatchedHandTransformPos;
+    protected Matrix4x4 LateLatchedHandTransformRot;
+    [AutoFind]
     public LeapServiceProvider provider;
 
     [Header("Values for Stored Start Pose")]
@@ -66,8 +65,9 @@ namespace Leap.Unity {
 
     public override void InitHand() {
       SkinnedHandMesh = GetComponentInChildren<SkinnedMeshRenderer>();
-      sphereMesh = new Mesh();// SkinnedHandMesh.sharedMesh;
-      sphereMaterial = SkinnedHandMesh.sharedMaterial;
+      SkinnedHandMesh.enabled = !LateLatching;
+      handMesh = new Mesh();
+      handMaterial = SkinnedHandMesh.sharedMaterial;
 
       UpdateHand();
     }
@@ -100,11 +100,9 @@ namespace Leap.Unity {
       }
 
       if (Application.isPlaying && SkinnedHandMesh.sharedMesh != null) {
-        SkinnedMeshRendererTransform = Matrix4x4.TRS(SkinnedHandMesh.transform.position, SkinnedHandMesh.transform.rotation, SkinnedHandMesh.transform.localScale);
-        //UpdateHandTransform = Matrix4x4.TRS(ModelPalmAtLeapWrist ? hand_.Arm.WristPosition.ToVector3() : hand_.PalmPosition.ToVector3(), CalculateRotation(hand_.Basis), Vector3.one);
-        UpdateHandPos = hand_.PalmPosition.ToVector3();
-        UpdateHandRot = CalculateRotation(hand_.Basis);
-        SkinnedHandMesh.BakeMesh(sphereMesh);
+        SkinnedHandMesh.transform.position = hand_.PalmPosition.ToVector3();
+        SkinnedHandMesh.transform.rotation = CalculateRotation(hand_.Basis) * Reorientation();
+        SkinnedHandMesh.BakeMesh(handMesh);
       }
     }
 
@@ -306,25 +304,33 @@ namespace Leap.Unity {
         return;
       }
 #endif
+
+      bool InverseStylePrediction = false;
       if (LateLatching && Application.isPlaying) {
         if (!provider.manualUpdateHasBeenCalledSinceUpdate) {
-          provider.ManuallyUpdateFrame();
+          //Add back the latency we gain by late latch to match the game latency (but increase smoothness)
+          //This means your primary interpolation delay should be set to perfectly compensate for the latency of the system (without late latching)
+          //That interpolation delay is -47 on the PC and -83(!) on Android
+          long predictionAmount = (long)(Time.deltaTime * 1000f);
+          provider.ManuallyUpdateFrame(predictionAmount * (InverseStylePrediction ? -1 : 1));
         }
+
         lateFrame = provider.CurrentFrame;
 
-        //LateLatchedHandTransform = Matrix4x4.TRS(ModelPalmAtLeapWrist ? lateFrame.Hand(LeapID()).Arm.WristPosition.ToVector3() : lateFrame.Hand(LeapID()).PalmPosition.ToVector3(), CalculateRotation(lateFrame.Hand(LeapID()).Basis), Vector3.one);
         if (lateFrame.Hand(LeapID()) != null) {
-          LateLatchedHandTransform = Matrix4x4.TRS((lateFrame.Hand(LeapID()).PalmPosition.ToVector3() - UpdateHandPos), Quaternion.identity, Vector3.one);
-          //Matrix4x4 LateLatchedHandRotation = Matrix4x4.TRS(Vector3.zero, Quaternion.Inverse(UpdateHandRot) * CalculateRotation(lateFrame.Hand(LeapID()).Basis), Vector3.one);
+
+          SkinnedMeshRendererTransform = Matrix4x4.TRS(SkinnedHandMesh.transform.position, SkinnedHandMesh.transform.rotation, SkinnedHandMesh.transform.localScale);
+          if (!InverseStylePrediction) {
+            LateLatchedHandTransformRot = Matrix4x4.TRS(Vector3.zero, SkinnedHandMesh.transform.rotation * (Quaternion.Inverse(lateFrame.Hand(LeapID()).Rotation.ToQuaternion() * Reorientation())), Vector3.one);
+            LateLatchedHandTransformPos = Matrix4x4.TRS((lateFrame.Hand(LeapID()).PalmPosition.ToVector3() - SkinnedHandMesh.transform.position), Quaternion.identity, Vector3.one);
+          } else {
+            LateLatchedHandTransformRot = Matrix4x4.TRS(Vector3.zero, Quaternion.Inverse(lateFrame.Hand(LeapID()).Rotation.ToQuaternion() * Reorientation())*SkinnedHandMesh.transform.rotation, Vector3.one);
+            LateLatchedHandTransformPos = Matrix4x4.TRS(SkinnedHandMesh.transform.position-lateFrame.Hand(LeapID()).PalmPosition.ToVector3(), Quaternion.identity, Vector3.one);
+          }
 
           //Send off the Late Latched Hand
-          if (sphereMesh != null) {
-            Graphics.DrawMesh(sphereMesh, (LateLatchedHandTransform * SkinnedMeshRendererTransform), sphereMaterial, 0);
-            //for (int j = 0; j < 5; j++) {
-            //  for (int k = 0; k < 4; k++) {
-            //    Graphics.DrawMesh(sphereMesh, Matrix4x4.TRS(lateFrame.Hand(LeapID()).Fingers[j].bones[k].NextJoint.ToVector3(), lateFrame.Hand(LeapID()).Fingers[j].bones[k].Rotation.ToQuaternion(), Vector3.one * 0.01f), sphereMaterial, 0);
-            //  }
-            //}
+          if (handMesh != null) {
+            Graphics.DrawMesh(handMesh, LateLatchedHandTransformPos * SkinnedMeshRendererTransform * LateLatchedHandTransformRot, handMaterial, 0);
           }
         }
       }
