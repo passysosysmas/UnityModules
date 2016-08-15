@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Leap;
 using Leap.Unity.Attributes;
+using Leap.Unity.Graphing;
 
 namespace Leap.Unity {
   /** This version of IHandModel supports a hand respresentation based on a skinned and jointed 3D model asset.*/
@@ -42,18 +43,20 @@ namespace Leap.Unity {
     public bool UseMetaCarpals;
     public Vector3 modelFingerPointing = new Vector3(0, 0, 0);
     public Vector3 modelPalmFacing = new Vector3(0, 0, 0);
-    [Tooltip("When true, this hand is repositioned according to the latest tracking data in OnPreCull; this visually cuts off a full frame of latency.")]
+    
+    [Tooltip("When true, this hand is repositioned according to the latest tracking data in OnPreCull; this visually cuts off a full frame of latency at the cost of some performance.")]
     public bool LateLatching = true;
-
+    [AutoFind]
+    [SerializeField]
+    [HideInInspector]
+    protected LeapServiceProvider LateLatchProvider;
     protected SkinnedMeshRenderer SkinnedHandMesh;
     protected Mesh handMesh;
-    protected Material handMaterial;
+    MaterialPropertyBlock handProperty;
     protected Frame lateFrame;
     protected Matrix4x4 SkinnedMeshRendererTransform;
     protected Matrix4x4 LateLatchedHandTransformPos;
     protected Matrix4x4 LateLatchedHandTransformRot;
-    [AutoFind]
-    public LeapServiceProvider provider;
 
     [Header("Values for Stored Start Pose")]
     [SerializeField]
@@ -65,9 +68,8 @@ namespace Leap.Unity {
 
     public override void InitHand() {
       SkinnedHandMesh = GetComponentInChildren<SkinnedMeshRenderer>();
-      SkinnedHandMesh.enabled = !LateLatching;
       handMesh = new Mesh();
-      handMaterial = SkinnedHandMesh.sharedMaterial;
+      handProperty = new MaterialPropertyBlock();
 
       UpdateHand();
     }
@@ -99,10 +101,15 @@ namespace Leap.Unity {
         }
       }
 
-      if (Application.isPlaying && SkinnedHandMesh.sharedMesh != null) {
+      if (LateLatching && Application.isPlaying && SkinnedHandMesh.sharedMesh != null) {
+        SkinnedHandMesh.enabled = false;
         SkinnedHandMesh.transform.position = hand_.PalmPosition.ToVector3();
         SkinnedHandMesh.transform.rotation = CalculateRotation(hand_.Basis) * Reorientation();
+        if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.BeginSample("MeshBaking", RealtimeGraph.GraphUnits.Miliseconds); }
         SkinnedHandMesh.BakeMesh(handMesh);
+        if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.EndSample(); }
+      } else {
+        SkinnedHandMesh.enabled = true;
       }
     }
 
@@ -293,6 +300,7 @@ namespace Leap.Unity {
       Camera.onPreCull -= LateEnqueueHandMesh;
     }
     public void LateEnqueueHandMesh(Camera camera) {
+      if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.BeginSample("LateEnqueue", RealtimeGraph.GraphUnits.Miliseconds); }
 #if UNITY_EDITOR
       //Hard-coded name of the camera used to generate the pre-render view
       if (camera.gameObject.name == "PreRenderCamera") {
@@ -305,35 +313,30 @@ namespace Leap.Unity {
       }
 #endif
 
-      bool InverseStylePrediction = false;
       if (LateLatching && Application.isPlaying) {
-        if (!provider.manualUpdateHasBeenCalledSinceUpdate) {
+        if (!LateLatchProvider.manualUpdateHasBeenCalledSinceUpdate) {
           //Add back the latency we gain by late latch to match the game latency (but increase smoothness)
           //This means your primary interpolation delay should be set to perfectly compensate for the latency of the system (without late latching)
           //That interpolation delay is -47 on the PC and -83(!) on Android
-          long predictionAmount = (long)(Time.deltaTime * 1000f);
-          provider.ManuallyUpdateFrame(predictionAmount * (InverseStylePrediction ? -1 : 1));
+          //Less-Negative numbers will result in smoother tracking, but increased delay.
+          long interpolationAmount = (long)((Time.smoothDeltaTime/Time.timeScale) * 1000f);
+          LateLatchProvider.ManuallyUpdateFrame(interpolationAmount);
         }
 
-        lateFrame = provider.CurrentFrame;
+        lateFrame = LateLatchProvider.CurrentFrame;
 
         if (lateFrame.Hand(LeapID()) != null) {
-
           SkinnedMeshRendererTransform = Matrix4x4.TRS(SkinnedHandMesh.transform.position, SkinnedHandMesh.transform.rotation, SkinnedHandMesh.transform.localScale);
-          if (!InverseStylePrediction) {
-            LateLatchedHandTransformRot = Matrix4x4.TRS(Vector3.zero, SkinnedHandMesh.transform.rotation * (Quaternion.Inverse(lateFrame.Hand(LeapID()).Rotation.ToQuaternion() * Reorientation())), Vector3.one);
-            LateLatchedHandTransformPos = Matrix4x4.TRS((lateFrame.Hand(LeapID()).PalmPosition.ToVector3() - SkinnedHandMesh.transform.position), Quaternion.identity, Vector3.one);
-          } else {
-            LateLatchedHandTransformRot = Matrix4x4.TRS(Vector3.zero, Quaternion.Inverse(lateFrame.Hand(LeapID()).Rotation.ToQuaternion() * Reorientation())*SkinnedHandMesh.transform.rotation, Vector3.one);
-            LateLatchedHandTransformPos = Matrix4x4.TRS(SkinnedHandMesh.transform.position-lateFrame.Hand(LeapID()).PalmPosition.ToVector3(), Quaternion.identity, Vector3.one);
-          }
+          LateLatchedHandTransformRot = Matrix4x4.TRS(Vector3.zero, SkinnedHandMesh.transform.rotation * (Quaternion.Inverse(lateFrame.Hand(LeapID()).Rotation.ToQuaternion() * Reorientation())), Vector3.one);
+          LateLatchedHandTransformPos = Matrix4x4.TRS((lateFrame.Hand(LeapID()).PalmPosition.ToVector3() - SkinnedHandMesh.transform.position), Quaternion.identity, Vector3.one);
 
           //Send off the Late Latched Hand
           if (handMesh != null) {
-            Graphics.DrawMesh(handMesh, LateLatchedHandTransformPos * SkinnedMeshRendererTransform * LateLatchedHandTransformRot, handMaterial, 0);
+            Graphics.DrawMesh(handMesh, LateLatchedHandTransformPos * SkinnedMeshRendererTransform * LateLatchedHandTransformRot, SkinnedHandMesh.sharedMaterial, SkinnedHandMesh.sortingLayerID, camera, 0, handProperty, SkinnedHandMesh.shadowCastingMode, SkinnedHandMesh.receiveShadows, SkinnedHandMesh.probeAnchor, SkinnedHandMesh.useLightProbes);
           }
         }
       }
+      if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.EndSample(); }
     }
   }
 }

@@ -43,13 +43,13 @@ namespace Leap.Unity {
     [SerializeField]
     protected bool _useInterpolation = false;
 
-    [Tooltip("How much delay should be added to interpolation.  A non-zero amount is needed to prevent extrapolation artifacts.")]
+    [Tooltip("How much delay (in ms) should be added to interpolation.  Negative numbers will Extrapolate by that amount.")]
     [SerializeField]
-    protected long _interpolationDelay = 15;
+    protected long _interpolationDelay = 0;
 
-    protected float smoothedTrackingLatency = 16000f;
     [HideInInspector]
-    public bool manualUpdateHasBeenCalledSinceUpdate = false;
+    public bool manualUpdateHasBeenCalledSinceUpdate;
+    protected float smoothedTrackingLatency = 16000f;
     protected Vector3 warpedPosition;
     protected Quaternion warpedRotation;
 
