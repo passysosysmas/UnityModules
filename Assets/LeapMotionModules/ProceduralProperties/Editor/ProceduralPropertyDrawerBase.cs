@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Collections.Generic;
 
 public abstract class ProceduralPropertyDrawerBase<BaseType, ProceduralType, ScriptableType> :
-                      PropertyDrawer where BaseType : struct 
+                      PropertyDrawer where BaseType : struct
                                      where ScriptableType : ScriptableObject {
   private const float DROPDOWN_WIDTH = 18;
 
@@ -78,19 +78,21 @@ public abstract class ProceduralPropertyDrawerBase<BaseType, ProceduralType, Scr
     } else {
       SerializedObject scriptableObj = new SerializedObject(scriptable.objectReferenceValue);
       SerializedProperty it = scriptableObj.GetIterator();
-      SerializedProperty scriptProperty = null;
       bool isFirst = true;
       while (it.NextVisible(isFirst)) {
-        float height = base.GetPropertyHeight(it, label);
-        position.height = Mathf.Max(EditorGUIUtility.singleLineHeight, height);
+        position.height = Mathf.Max(EditorGUIUtility.singleLineHeight, EditorGUI.GetPropertyHeight(it, label));
 
         if (isFirst) {
-          scriptProperty = it.Copy();
-          it.NextVisible(false);
           isFirst = false;
 
-          EditorGUI.PropertyField(position, it, true);
+          EditorGUI.BeginDisabledGroup(true);
+          EditorGUI.PropertyField(position, it, label);
+          EditorGUI.EndDisabledGroup();
+
           newIndex = EditorGUI.Popup(dropdownRect, index, info.scriptableTypeContent);
+
+          EditorGUI.indentLevel++;
+          position = EditorGUI.IndentedRect(position);
         } else {
           EditorGUI.PropertyField(position, it, true);
         }
@@ -98,9 +100,7 @@ public abstract class ProceduralPropertyDrawerBase<BaseType, ProceduralType, Scr
         position.y += position.height;
       }
 
-      EditorGUI.BeginDisabledGroup(true);
-      EditorGUI.PropertyField(position, scriptProperty, new GUIContent(" "), true);
-      EditorGUI.EndDisabledGroup();
+      EditorGUI.indentLevel--;
 
       scriptableObj.ApplyModifiedProperties();
     }
@@ -132,7 +132,7 @@ public abstract class ProceduralPropertyDrawerBase<BaseType, ProceduralType, Scr
 
     float height;
     if (scriptable.objectReferenceValue == null) {
-      height = base.GetPropertyHeight(value, label);
+      height = EditorGUI.GetPropertyHeight(value, label);
     } else {
       height = 0;
       SerializedObject scriptableObj = new SerializedObject(scriptable.objectReferenceValue);
@@ -140,7 +140,7 @@ public abstract class ProceduralPropertyDrawerBase<BaseType, ProceduralType, Scr
       bool isFirst = true;
       while (it.NextVisible(isFirst)) {
         isFirst = false;
-        height += base.GetPropertyHeight(it, label);
+        height += EditorGUI.GetPropertyHeight(it, label);
       }
     }
 

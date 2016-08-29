@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
+using System;
 
-public class ProceduralVector2 {
+[Serializable]
+public struct ProceduralVector2 {
 
   [SerializeField]
   private Vector2 _value;
@@ -16,6 +18,17 @@ public class ProceduralVector2 {
         return _value;
       }
     }
+  }
+
+  public static implicit operator ProceduralVector2(Vector2 value) {
+    var proceduralVec2 = new ProceduralVector2();
+    proceduralVec2._value = value;
+    proceduralVec2._scriptable = null;
+    return proceduralVec2;
+  }
+
+  public static implicit operator Vector2(ProceduralVector2 proceduralVec2) {
+    return proceduralVec2.value;
   }
 
   public abstract class ScriptableVector2 : ScriptablePropertyBase<Vector2> { }

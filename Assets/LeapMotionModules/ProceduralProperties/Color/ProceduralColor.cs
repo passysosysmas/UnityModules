@@ -26,5 +26,9 @@ public struct ProceduralColor {
     return proceduralColor;
   }
 
+  public static implicit operator Color(ProceduralColor proceduralColor) {
+    return proceduralColor.value;
+  }
+
   public abstract class ScriptableColor : ScriptablePropertyBase<Color> { }
 }

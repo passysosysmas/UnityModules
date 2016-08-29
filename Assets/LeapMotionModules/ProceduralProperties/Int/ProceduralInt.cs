@@ -1,8 +1,8 @@
 ﻿using UnityEngine;
-using System.Collections;
 using System;
 
-public class ProceduralInt {
+[Serializable]
+public struct ProceduralInt {
 
   [SerializeField]
   private int _value;
@@ -18,6 +18,17 @@ public class ProceduralInt {
         return _value;
       }
     }
+  }
+
+  public static implicit operator ProceduralInt(int value) {
+    var proceduralInt = new ProceduralInt();
+    proceduralInt._value = value;
+    proceduralInt._scriptable = null;
+    return proceduralInt;
+  }
+
+  public static implicit operator int(ProceduralInt proceduralInt) {
+    return proceduralInt.value;
   }
 
   public abstract class ScriptableInt : ScriptablePropertyBase<int> { }
