@@ -7,16 +7,23 @@ public struct ProceduralColor {
   private Color _value;
 
   [SerializeField]
-  private ScriptableColor _scriptableColor;
+  private ScriptableColor _scriptable;
 
   public Color value {
     get {
-      if(_scriptableColor != null) {
-        return _scriptableColor.value;
+      if (_scriptable != null) {
+        return _scriptable.value;
       } else {
         return _value;
       }
     }
+  }
+
+  public static implicit operator ProceduralColor(Color color) {
+    var proceduralColor = new ProceduralColor();
+    proceduralColor._value = color;
+    proceduralColor._scriptable = null;
+    return proceduralColor;
   }
 
   public abstract class ScriptableColor : ScriptablePropertyBase<Color> { }
