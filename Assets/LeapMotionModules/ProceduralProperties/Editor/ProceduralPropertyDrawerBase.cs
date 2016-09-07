@@ -102,7 +102,12 @@ public abstract class ProceduralPropertyDrawerBase<BaseType, ProceduralType, Scr
 
       EditorGUI.indentLevel--;
 
-      scriptableObj.ApplyModifiedProperties();
+      if (scriptableObj.ApplyModifiedProperties()) {
+        //HACK: Force repaint of property by changing value to null then back again
+        var old = scriptable.objectReferenceValue;
+        scriptable.objectReferenceValue = null;
+        scriptable.objectReferenceValue = old;
+      }
     }
 
     if (newIndex == -1) {
