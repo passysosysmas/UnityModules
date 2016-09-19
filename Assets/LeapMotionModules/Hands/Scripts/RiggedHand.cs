@@ -9,6 +9,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Leap;
+using Leap.Unity.Attributes;
+using Leap.Unity.Graphing;
 
 namespace Leap.Unity {
   /** This version of IHandModel supports a hand respresentation based on a skinned and jointed 3D model asset.*/
@@ -24,7 +26,7 @@ namespace Leap.Unity {
     [Tooltip("When True, hands will be put into a Leap editor pose near the LeapServiceProvider's transform.  When False, the hands will be returned to their Start Pose if it has been saved.")]
     [SerializeField]
     private bool setEditorLeapPose = true;
-    
+
     public bool SetEditorLeapPose {
       get { return setEditorLeapPose; }
       set {
@@ -41,6 +43,21 @@ namespace Leap.Unity {
     public bool UseMetaCarpals;
     public Vector3 modelFingerPointing = new Vector3(0, 0, 0);
     public Vector3 modelPalmFacing = new Vector3(0, 0, 0);
+    
+    [Tooltip("When true, this hand is repositioned according to the latest tracking data in OnPreCull; this visually cuts off a full frame of latency at the cost of some performance.")]
+    public bool LateLatching = true;
+    [AutoFind]
+    [SerializeField]
+    //[HideInInspector]
+    protected LeapServiceProvider LateLatchProvider;
+    protected SkinnedMeshRenderer SkinnedHandMesh;
+    protected Mesh handMesh;
+    MaterialPropertyBlock handProperty;
+    protected Frame lateFrame;
+    protected Matrix4x4 SkinnedMeshRendererTransform;
+    protected Matrix4x4 LateLatchedHandTransformPos;
+    protected Matrix4x4 LateLatchedHandTransformRot;
+
     [Header("Values for Stored Start Pose")]
     [SerializeField]
     private List<Transform> jointList = new List<Transform>();
@@ -50,6 +67,10 @@ namespace Leap.Unity {
     private List<Vector3> localPositions = new List<Vector3>();
 
     public override void InitHand() {
+      SkinnedHandMesh = GetComponentInChildren<SkinnedMeshRenderer>();
+      handMesh = new Mesh();
+      handProperty = new MaterialPropertyBlock();
+
       UpdateHand();
     }
 
@@ -60,8 +81,7 @@ namespace Leap.Unity {
       if (palm != null) {
         if (ModelPalmAtLeapWrist) {
           palm.position = GetWristPosition();
-        }
-        else {
+        } else {
           palm.position = GetPalmPosition();
           if (wristJoint) {
             wristJoint.position = GetWristPosition();
@@ -79,6 +99,17 @@ namespace Leap.Unity {
           fingers[i].fingerType = (Finger.FingerType)i;
           fingers[i].UpdateFinger();
         }
+      }
+
+      if (LateLatching && Application.isPlaying && SkinnedHandMesh.sharedMesh != null) {
+        SkinnedHandMesh.enabled = false;
+        SkinnedHandMesh.transform.position = hand_.PalmPosition.ToVector3();
+        SkinnedHandMesh.transform.rotation = CalculateRotation(hand_.Basis) * Reorientation();
+        if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.BeginSample("MeshBaking", RealtimeGraph.GraphUnits.Miliseconds); }
+        SkinnedHandMesh.BakeMesh(handMesh);
+        if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.EndSample(); }
+      } else {
+        SkinnedHandMesh.enabled = true;
       }
     }
 
@@ -123,13 +154,13 @@ namespace Leap.Unity {
       setFingerPalmFacing();
     }
     /**Finds palm and finds root of each finger by name and assigns RiggedFinger scripts */
-    private void assignRiggedFingersByName(){
-      List<string> palmStrings = new List<string> { "palm"};
+    private void assignRiggedFingersByName() {
+      List<string> palmStrings = new List<string> { "palm" };
       List<string> thumbStrings = new List<string> { "thumb", "tmb" };
-      List<string> indexStrings = new List<string> { "index", "idx"};
-      List<string> middleStrings = new List<string> { "middle", "mid"};
-      List<string> ringStrings = new List<string> { "ring"};
-      List<string> pinkyStrings = new List<string> { "pinky", "pin"};
+      List<string> indexStrings = new List<string> { "index", "idx" };
+      List<string> middleStrings = new List<string> { "middle", "mid" };
+      List<string> ringStrings = new List<string> { "ring" };
+      List<string> pinkyStrings = new List<string> { "pinky", "pin" };
       //find palm by name
       //Transform palm = null;
       Transform thumb = null;
@@ -138,10 +169,9 @@ namespace Leap.Unity {
       Transform ring = null;
       Transform pinky = null;
       Transform[] children = transform.GetComponentsInChildren<Transform>();
-      if (palmStrings.Any(w => transform.name.ToLower().Contains(w))){
+      if (palmStrings.Any(w => transform.name.ToLower().Contains(w))) {
         base.palm = transform;
-      }
-      else{
+      } else {
         foreach (Transform t in children) {
           if (palmStrings.Any(w => t.name.ToLower().Contains(w)) == true) {
             base.palm = t;
@@ -217,8 +247,7 @@ namespace Leap.Unity {
 
       if (Handedness == Chirality.Left) {
         perpendicular = Vector3.Cross(side2, side1);
-      }
-      else perpendicular = Vector3.Cross(side1, side2);
+      } else perpendicular = Vector3.Cross(side1, side2);
       Vector3 calculatedPalmFacing = CalculateZeroedVector(perpendicular);
       return calculatedPalmFacing; //+works for Mixamo, -reversed LoPoly_Hands_Skeleton and Winston
     }
@@ -260,6 +289,54 @@ namespace Leap.Unity {
         jointTrans.localRotation = localRotations[i];
         jointTrans.localPosition = localPositions[i];
       }
+    }
+
+    //Late-Latching Functions
+    protected virtual void OnEnable() {
+      Camera.onPreCull -= LateEnqueueHandMesh;
+      Camera.onPreCull += LateEnqueueHandMesh;
+    }
+    protected virtual void OnDisable() {
+      Camera.onPreCull -= LateEnqueueHandMesh;
+    }
+    public void LateEnqueueHandMesh(Camera camera) {
+      if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.BeginSample("LateEnqueue", RealtimeGraph.GraphUnits.Miliseconds); }
+#if UNITY_EDITOR
+      //Hard-coded name of the camera used to generate the pre-render view
+      if (camera.gameObject.name == "PreRenderCamera") {
+        return;
+      }
+
+      bool isScenePreviewCamera = camera.gameObject.hideFlags == HideFlags.HideAndDontSave;
+      if (isScenePreviewCamera) {
+        return;
+      }
+#endif
+
+      if (LateLatching && Application.isPlaying) {
+        if (!LateLatchProvider.manualUpdateHasBeenCalledSinceUpdate) {
+          //Add back the latency we gain by late latch to match the game latency (but increase smoothness)
+          //This means your primary interpolation delay should be set to perfectly compensate for the latency of the system (without late latching)
+          //That interpolation delay is -47 on the PC and -83(!) on Android
+          //Less-Negative numbers will result in smoother tracking, but increased delay.
+          long interpolationAmount = (long)((Time.smoothDeltaTime / Time.timeScale) * 1000f);
+          LateLatchProvider.ManuallyUpdateFrame(interpolationAmount);
+        }
+
+        lateFrame = LateLatchProvider.CurrentFrame;
+
+        if (lateFrame.Hand(LeapID()) != null) {
+          SkinnedMeshRendererTransform = Matrix4x4.TRS(SkinnedHandMesh.transform.position, SkinnedHandMesh.transform.rotation, SkinnedHandMesh.transform.localScale);
+          LateLatchedHandTransformRot = Matrix4x4.TRS(Vector3.zero, SkinnedHandMesh.transform.rotation * (Quaternion.Inverse(lateFrame.Hand(LeapID()).Rotation.ToQuaternion() * Reorientation())), Vector3.one);
+          LateLatchedHandTransformPos = Matrix4x4.TRS((lateFrame.Hand(LeapID()).PalmPosition.ToVector3() - SkinnedHandMesh.transform.position), Quaternion.identity, Vector3.one);
+
+          //Send off the Late Latched Hand
+          if (handMesh != null) {
+            Graphics.DrawMesh(handMesh, LateLatchedHandTransformPos * SkinnedMeshRendererTransform * LateLatchedHandTransformRot, SkinnedHandMesh.sharedMaterial, SkinnedHandMesh.sortingLayerID, camera, 0, handProperty, SkinnedHandMesh.shadowCastingMode, SkinnedHandMesh.receiveShadows, SkinnedHandMesh.probeAnchor, (SkinnedHandMesh.lightProbeUsage != UnityEngine.Rendering.LightProbeUsage.Off));
+          }
+        }
+      }
+      if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.EndSample(); }
     }
   }
 }

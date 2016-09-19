@@ -41,8 +41,14 @@ namespace Leap.Unity {
     [SerializeField]
     protected bool _useInterpolation = true;
 
-    [Tooltip("How much delay should be added to interpolation.")]
+    [Tooltip("How much delay (in ms) should be added to interpolation.  Negative numbers will Extrapolate by that amount.")]
     protected long _interpolationDelay = 0;
+
+    [HideInInspector]
+    public bool manualUpdateHasBeenCalledSinceUpdate;
+    protected float smoothedTrackingLatency = 16000f;
+    protected Vector3 warpedPosition;
+    protected Quaternion warpedRotation;
 
     protected Controller leap_controller_;
 
@@ -197,6 +203,7 @@ namespace Leap.Unity {
 
         DispatchUpdateFrameEvent(_transformedUpdateFrame);
       }
+      manualUpdateHasBeenCalledSinceUpdate = false;
     }
 
     protected virtual void FixedUpdate() {
@@ -223,6 +230,20 @@ namespace Leap.Unity {
 
         DispatchFixedFrameEvent(_transformedFixedFrame);
       }
+    }
+
+    public void ManuallyUpdateFrame(long temporalOffset = 0) {
+      if (_useInterpolation) {
+        smoothedTrackingLatency = Mathf.Min(Mathf.Lerp(smoothedTrackingLatency, (float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), 0.01f), 24000f);
+        leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, leap_controller_.Now() - (long)smoothedTrackingLatency - ((_interpolationDelay + temporalOffset) * 1000));
+      } else {
+        leap_controller_.Frame(_untransformedUpdateFrame);
+      }
+
+      if (_untransformedUpdateFrame != null) {
+        transformFrame(_untransformedUpdateFrame, _transformedUpdateFrame, false);
+      }
+      manualUpdateHasBeenCalledSinceUpdate = true;
     }
 
     protected virtual void OnDestroy() {
@@ -290,14 +311,13 @@ namespace Leap.Unity {
       leap_controller_.Device -= onHandControllerConnect;
     }
 
-    protected void transformFrame(Frame source, Frame dest) {
+    protected void transformFrame(Frame source, Frame dest, bool resampleTemporalWarping = true) {
       LeapTransform leapTransform;
       if (_temporalWarping != null) {
-        Vector3 warpedPosition;
-        Quaternion warpedRotation;
-        _temporalWarping.TryGetWarpedTransform(LeapVRTemporalWarping.WarpedAnchor.CENTER, out warpedPosition, out warpedRotation, source.Timestamp);
-
-        warpedRotation = warpedRotation * transform.localRotation;
+        if (resampleTemporalWarping) {
+          _temporalWarping.TryGetWarpedTransform(LeapVRTemporalWarping.WarpedAnchor.CENTER, out warpedPosition, out warpedRotation, source.Timestamp);
+          warpedRotation = warpedRotation * transform.localRotation;
+        }
 
         leapTransform = new LeapTransform(warpedPosition.ToVector(), warpedRotation.ToLeapQuaternion(), transform.lossyScale.ToVector() * 1e-3f);
         leapTransform.MirrorZ();
