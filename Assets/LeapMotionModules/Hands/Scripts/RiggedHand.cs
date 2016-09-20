@@ -46,10 +46,10 @@ namespace Leap.Unity {
     
     [Tooltip("When true, this hand is repositioned according to the latest tracking data in OnPreCull; this visually cuts off a full frame of latency at the cost of some performance.")]
     public bool LateLatching = true;
-    [AutoFind]
-    [SerializeField]
+    //[SerializeField]
     //[HideInInspector]
-    protected LeapServiceProvider LateLatchProvider;
+    [AutoFind]
+    public LeapServiceProvider LateLatchProvider;
     protected SkinnedMeshRenderer SkinnedHandMesh;
     protected Mesh handMesh;
     MaterialPropertyBlock handProperty;
@@ -57,6 +57,7 @@ namespace Leap.Unity {
     protected Matrix4x4 SkinnedMeshRendererTransform;
     protected Matrix4x4 LateLatchedHandTransformPos;
     protected Matrix4x4 LateLatchedHandTransformRot;
+    protected Material testMat;
 
     [Header("Values for Stored Start Pose")]
     [SerializeField]
@@ -70,7 +71,7 @@ namespace Leap.Unity {
       SkinnedHandMesh = GetComponentInChildren<SkinnedMeshRenderer>();
       handMesh = new Mesh();
       handProperty = new MaterialPropertyBlock();
-
+      testMat = new Material(Shader.Find("Diffuse"));
       UpdateHand();
     }
 
@@ -102,7 +103,7 @@ namespace Leap.Unity {
       }
 
       if (LateLatching && Application.isPlaying && SkinnedHandMesh.sharedMesh != null) {
-        SkinnedHandMesh.enabled = false;
+        SkinnedHandMesh.enabled = true;
         SkinnedHandMesh.transform.position = hand_.PalmPosition.ToVector3();
         SkinnedHandMesh.transform.rotation = CalculateRotation(hand_.Basis) * Reorientation();
         if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.BeginSample("MeshBaking", RealtimeGraph.GraphUnits.Miliseconds); }
@@ -319,7 +320,7 @@ namespace Leap.Unity {
           //This means your primary interpolation delay should be set to perfectly compensate for the latency of the system (without late latching)
           //That interpolation delay is -47 on the PC and -83(!) on Android
           //Less-Negative numbers will result in smoother tracking, but increased delay.
-          long interpolationAmount = (long)((Time.smoothDeltaTime / Time.timeScale) * 1000f);
+          long interpolationAmount = 0;// (long)((Time.smoothDeltaTime / Time.timeScale) * 1000f);
           LateLatchProvider.ManuallyUpdateFrame(interpolationAmount);
         }
 
@@ -327,12 +328,20 @@ namespace Leap.Unity {
 
         if (lateFrame.Hand(LeapID()) != null) {
           SkinnedMeshRendererTransform = Matrix4x4.TRS(SkinnedHandMesh.transform.position, SkinnedHandMesh.transform.rotation, SkinnedHandMesh.transform.localScale);
-          LateLatchedHandTransformRot = Matrix4x4.TRS(Vector3.zero, SkinnedHandMesh.transform.rotation * (Quaternion.Inverse(lateFrame.Hand(LeapID()).Rotation.ToQuaternion() * Reorientation())), Vector3.one);
+          LateLatchedHandTransformRot = Matrix4x4.TRS(Vector3.zero, Quaternion.Inverse(SkinnedHandMesh.transform.rotation)*(lateFrame.Hand(LeapID()).Rotation.ToQuaternion() * Reorientation()), Vector3.one);
           LateLatchedHandTransformPos = Matrix4x4.TRS((lateFrame.Hand(LeapID()).PalmPosition.ToVector3() - SkinnedHandMesh.transform.position), Quaternion.identity, Vector3.one);
+
+          if (!hand_.IsLeft){
+            Shader.SetGlobalMatrix("_rightHandPos", LateLatchedHandTransformPos); //World position delta
+            Shader.SetGlobalMatrix("_rightHandRot", LateLatchedHandTransformRot); //Modelspace rotation delta
+          } else {
+            Shader.SetGlobalMatrix("_leftHandPos", LateLatchedHandTransformPos); //World position delta
+            Shader.SetGlobalMatrix("_leftHandRot", LateLatchedHandTransformRot); //Modelspace rotation delta
+          }
 
           //Send off the Late Latched Hand
           if (handMesh != null) {
-            Graphics.DrawMesh(handMesh, LateLatchedHandTransformPos * SkinnedMeshRendererTransform * LateLatchedHandTransformRot, SkinnedHandMesh.sharedMaterial, SkinnedHandMesh.sortingLayerID, camera, 0, handProperty, SkinnedHandMesh.shadowCastingMode, SkinnedHandMesh.receiveShadows, SkinnedHandMesh.probeAnchor, (SkinnedHandMesh.lightProbeUsage != UnityEngine.Rendering.LightProbeUsage.Off));
+            Graphics.DrawMesh(handMesh, LateLatchedHandTransformPos * (SkinnedMeshRendererTransform * LateLatchedHandTransformRot), testMat, SkinnedHandMesh.sortingLayerID, camera, 0, handProperty, SkinnedHandMesh.shadowCastingMode, SkinnedHandMesh.receiveShadows, SkinnedHandMesh.probeAnchor, (SkinnedHandMesh.lightProbeUsage != UnityEngine.Rendering.LightProbeUsage.Off));
           }
         }
       }

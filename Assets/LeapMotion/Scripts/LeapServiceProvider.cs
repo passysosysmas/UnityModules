@@ -190,9 +190,8 @@ namespace Leap.Unity {
         Int64 time = leap_controller_.Now() - (_interpolationDelay+16) * 1000;
         leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, time);
 #else
-        _smoothedTrackingLatency.value = Mathf.Min(_smoothedTrackingLatency.value, 25000f);
-        _smoothedTrackingLatency.Update((float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), Time.deltaTime);
-        leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, leap_controller_.Now() - (long)_smoothedTrackingLatency.value - (_interpolationDelay * 1000));
+        smoothedTrackingLatency = Mathf.Min(Mathf.Lerp(smoothedTrackingLatency, (float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), 0.01f), 28000f);
+        leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, leap_controller_.Now() - (long)smoothedTrackingLatency - ((_interpolationDelay) * 1000));
 #endif
       } else {
         leap_controller_.Frame(_untransformedUpdateFrame);
@@ -217,9 +216,8 @@ namespace Leap.Unity {
         Int64 time = leap_controller_.Now() - (_interpolationDelay+16) * 1000;
         leap_controller_.GetInterpolatedFrame(_untransformedFixedFrame, time);
 #else
-        _smoothedTrackingLatency.value = Mathf.Min(_smoothedTrackingLatency.value, 25000f);
-        _smoothedTrackingLatency.Update((float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), Time.deltaTime);
-        leap_controller_.GetInterpolatedFrame(_untransformedFixedFrame, leap_controller_.Now() - (long)_smoothedTrackingLatency.value - (_interpolationDelay * 1000));
+        smoothedTrackingLatency = Mathf.Min(Mathf.Lerp(smoothedTrackingLatency, (float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), 0.01f), 28000f);
+        leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, leap_controller_.Now() - (long)smoothedTrackingLatency - ((_interpolationDelay) * 1000));
 #endif
       } else {
         leap_controller_.Frame(_untransformedFixedFrame);
@@ -234,7 +232,7 @@ namespace Leap.Unity {
 
     public void ManuallyUpdateFrame(long temporalOffset = 0) {
       if (_useInterpolation) {
-        smoothedTrackingLatency = Mathf.Min(Mathf.Lerp(smoothedTrackingLatency, (float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), 0.01f), 24000f);
+        smoothedTrackingLatency = Mathf.Min(Mathf.Lerp(smoothedTrackingLatency, (float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), 0.01f), 28000f);
         leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, leap_controller_.Now() - (long)smoothedTrackingLatency - ((_interpolationDelay + temporalOffset) * 1000));
       } else {
         leap_controller_.Frame(_untransformedUpdateFrame);

@@ -516,6 +516,10 @@ Prefab:
       propertyPath: LateLatchProvider
       value: 
       objectReference: {fileID: 72891527}
+    - target: {fileID: 13733758, guid: 2276723046d707c4f94d431ceb80ab92, type: 2}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: c02b781d7157d1f44a23e5c6cbcef6ce, type: 2}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 2276723046d707c4f94d431ceb80ab92, type: 2}
   m_IsPrefabParent: 0
