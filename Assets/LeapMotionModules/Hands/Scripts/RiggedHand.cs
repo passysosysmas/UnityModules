@@ -58,6 +58,7 @@ namespace Leap.Unity {
     protected Matrix4x4 LateLatchedHandTransformPos;
     protected Matrix4x4 LateLatchedHandTransformRot;
     protected Material testMat;
+    protected Matrix4x4[] transformArray = new Matrix4x4[4];
 
     [Header("Values for Stored Start Pose")]
     [SerializeField]
@@ -332,12 +333,14 @@ namespace Leap.Unity {
           LateLatchedHandTransformPos = Matrix4x4.TRS((lateFrame.Hand(LeapID()).PalmPosition.ToVector3() - SkinnedHandMesh.transform.position), Quaternion.identity, Vector3.one);
 
           if (!hand_.IsLeft){
-            Shader.SetGlobalMatrix("_rightHandPos", LateLatchedHandTransformPos); //World position delta
-            Shader.SetGlobalMatrix("_rightHandRot", LateLatchedHandTransformRot); //Modelspace rotation delta
+            transformArray[0] = LateLatchedHandTransformPos; //World position delta
+            transformArray[1] = LateLatchedHandTransformRot; //Modelspace rotation delta
           } else {
-            Shader.SetGlobalMatrix("_leftHandPos", LateLatchedHandTransformPos); //World position delta
-            Shader.SetGlobalMatrix("_leftHandRot", LateLatchedHandTransformRot); //Modelspace rotation delta
+            transformArray[2] = LateLatchedHandTransformPos; //World position delta
+            transformArray[3] = LateLatchedHandTransformRot; //Modelspace rotation delta
           }
+
+          Shader.SetGlobalMatrixArray("_handTransforms", transformArray);
 
           //Send off the Late Latched Hand
           if (handMesh != null) {

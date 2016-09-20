@@ -6,9 +6,9 @@ Material:
   m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
-  m_Name: VertexOffset
+  m_Name: LeftHandVertexOffset
   m_Shader: {fileID: 4800000, guid: af9e73c2951f67c4985ade8fa909893c, type: 3}
-  m_ShaderKeywords: _EMISSION
+  m_ShaderKeywords: _EMISSION _ISLEFTHAND_ON
   m_LightmapFlags: 1
   m_CustomRenderQueue: -1
   stringTagMap: {}
@@ -72,7 +72,7 @@ Material:
     m_Floats:
     - first:
         name: _Amount
-      second: 0
+      second: 0.5
     - first:
         name: _BumpScale
       second: 1
@@ -120,6 +120,9 @@ Material:
       second: 0
     - first:
         name: _ZWrite
+      second: 1
+    - first:
+        name: _isLeftHand
       second: 1
     m_Colors:
     - first:

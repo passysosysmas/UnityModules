@@ -1,10 +1,10 @@
 ﻿Shader "LeapMotion/VertexOffsetShader" {
 	Properties{
 		_Color("Color", Color) = (1, 1, 1, 1)
-		_Amount("Extrusion Amount", Range(-1, 1)) = 0.5
 		_MainTex("Albedo (RGB)", 2D) = "white" {}
 		_Glossiness("Smoothness", Range(0, 1)) = 0.5
-			_Metallic("Metallic", Range(0, 1)) = 0.0
+		_Metallic("Metallic", Range(0, 1)) = 0.0
+		[MaterialToggle] _isLeftHand("Is Left Hand?", Int) = 0
 	}
 	SubShader{
 			Tags{ "RenderType" = "Opaque" }
@@ -17,10 +17,11 @@
 			// Use shader model 3.0 target, to get nicer looking lighting
 #pragma target 3.0
 
-			uniform float4x4 _rightHandPos;
-			uniform float4x4 _rightHandRot;
+			uniform float4x4 _handTransforms[4];
+			int _isLeftHand;
 			void vert(inout appdata_full v) {
-				v.vertex = mul(unity_WorldToObject, mul(_rightHandPos, mul(unity_ObjectToWorld, mul(_rightHandRot, v.vertex))));
+				int startIndex = _isLeftHand * 2;
+				v.vertex = mul(unity_WorldToObject, mul(_handTransforms[startIndex], mul(unity_ObjectToWorld, mul(_handTransforms[startIndex+1], v.vertex))));
 			}
 
 			sampler2D _MainTex;
