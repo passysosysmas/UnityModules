@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -51,6 +52,9 @@ namespace Leap.Unity {
     protected bool _prevUpdateHandInPrecull = false;
 
     protected long _interpolationDelay = 0;
+
+    public int ExtrapolationAmount = 0;
+    public int BounceAmount = 0;
 
     protected Controller leap_controller_;
 
@@ -120,6 +124,13 @@ namespace Leap.Unity {
       set {
         _interpolationDelay = value;
       }
+    }
+
+    public void setExtrapolation(Slider slider) {
+      ExtrapolationAmount = (int)slider.value;
+    }
+    public void setBounce(Slider slider) {
+      BounceAmount = (int)slider.value;
     }
 
     /** Returns the Leap Controller instance. */
@@ -216,7 +227,7 @@ namespace Leap.Unity {
         _smoothedTrackingLatency.value = Mathf.Min(_smoothedTrackingLatency.value, 30000f);
         _smoothedTrackingLatency.Update((float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), Time.deltaTime);
 #endif
-        leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, CalculateInterpolationTime());
+        leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, CalculateInterpolationTime(false, _updateHandInPrecull? BounceAmount : 0));
       } else {
         leap_controller_.Frame(_untransformedUpdateFrame);
       }
@@ -398,7 +409,7 @@ namespace Leap.Unity {
               if (preCullHand != null && updateHand != null) {
                 //Pass PreCullHand * Inverse(UpdateHand) to the shader
                 _transformArray[_transformedPreCullFrame.Hands[i].IsLeft ? 1 : 0] =
-                                    Matrix4x4.TRS(preCullHand.PalmPosition.ToVector3(), preCullHand.Rotation.ToQuaternion(), Vector3.one) *
+                                    Matrix4x4.TRS(preCullHand.PalmPosition.ToVector3() + ((preCullHand.PalmPosition.ToVector3()-updateHand.PalmPosition.ToVector3())*((float)ExtrapolationAmount/(float)BounceAmount)), preCullHand.Rotation.ToQuaternion(), Vector3.one) *
                   Matrix4x4.Inverse(Matrix4x4.TRS(updateHand.PalmPosition.ToVector3(), updateHand.Rotation.ToQuaternion(), Vector3.one));
               }
             }
