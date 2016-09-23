@@ -227,7 +227,7 @@ namespace Leap.Unity {
         _smoothedTrackingLatency.value = Mathf.Min(_smoothedTrackingLatency.value, 30000f);
         _smoothedTrackingLatency.Update((float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), Time.deltaTime);
 #endif
-        leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, CalculateInterpolationTime(false, _updateHandInPrecull? BounceAmount : 0));
+        leap_controller_.GetInterpolatedFrameFromTime(_untransformedUpdateFrame, CalculateInterpolationTime() + ((_updateHandInPrecull ? ExtrapolationAmount : 0) * 1000), CalculateInterpolationTime() - ((_updateHandInPrecull ? BounceAmount : 0) * 1000));
       } else {
         leap_controller_.Frame(_untransformedUpdateFrame);
       }
@@ -261,7 +261,7 @@ namespace Leap.Unity {
 
     public void ManualUpdateFrame(long temporalOffset = 0) {
       if (_useInterpolation) {
-        leap_controller_.GetInterpolatedFrame(_untransformedPreCullFrame, CalculateInterpolationTime());
+        leap_controller_.GetInterpolatedFrameFromTime(_untransformedUpdateFrame, CalculateInterpolationTime() + ((_updateHandInPrecull ? ExtrapolationAmount:0) * 1000), CalculateInterpolationTime() - ((_updateHandInPrecull ? BounceAmount : 0) * 1000));
       } else {
         leap_controller_.Frame(_untransformedPreCullFrame);
       }
@@ -383,7 +383,7 @@ namespace Leap.Unity {
     }
 
     public void LateUpdateHandTransforms(Camera camera) {
-      if (_updateHandInPrecull) {
+      //if (_updateHandInPrecull) {
        // if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.BeginSample("Vertex Offset", RealtimeGraph.GraphUnits.Miliseconds); }
 
 #if UNITY_EDITOR
@@ -409,7 +409,7 @@ namespace Leap.Unity {
               if (preCullHand != null && updateHand != null) {
                 //Pass PreCullHand * Inverse(UpdateHand) to the shader
                 _transformArray[_transformedPreCullFrame.Hands[i].IsLeft ? 1 : 0] =
-                                    Matrix4x4.TRS(preCullHand.PalmPosition.ToVector3() + ((preCullHand.PalmPosition.ToVector3()-updateHand.PalmPosition.ToVector3())*((float)ExtrapolationAmount/(float)BounceAmount)), preCullHand.Rotation.ToQuaternion(), Vector3.one) *
+                                    Matrix4x4.TRS(preCullHand.PalmPosition.ToVector3(), preCullHand.Rotation.ToQuaternion(), Vector3.one) *
                   Matrix4x4.Inverse(Matrix4x4.TRS(updateHand.PalmPosition.ToVector3(), updateHand.Rotation.ToQuaternion(), Vector3.one));
               }
             }
@@ -417,7 +417,7 @@ namespace Leap.Unity {
           Shader.SetGlobalMatrixArray(HAND_ARRAY, _transformArray);
         }
         //if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.EndSample(); }
-      }
-    }
+    //}
+   }
   }
 }
