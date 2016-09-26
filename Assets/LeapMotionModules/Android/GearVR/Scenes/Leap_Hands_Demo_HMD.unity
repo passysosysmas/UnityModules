@@ -1085,7 +1085,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c592f16851a620743868a31232613370, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ModelsParent: {fileID: 0}
+  ModelsParent: {fileID: 492352490}
   ModelPool:
   - GroupName: Graphics_Hands
     _handPool: {fileID: 0}
@@ -3249,18 +3249,6 @@ MonoBehaviour:
     MaxFloatDistance: 0.01
     MinFloatDistance: 0
     Shadow: {fileID: 1015958030}
-    ShadowOnAboveLayer: 0
-    TriggerLayerEvent: 0
-    MaxShadowOpacity: 0
-    CurrentFloatingDistance: 0
-    touchingFinger: 0
-    distanceToAboveLayer: 0
-    maxDistanceToAboveLayer: 0
-  - Label: ScrollViewPanel Layer
-    LayerTransform: {fileID: 0}
-    MaxFloatDistance: 0.01
-    MinFloatDistance: 0
-    Shadow: {fileID: 0}
     ShadowOnAboveLayer: 0
     TriggerLayerEvent: 0
     MaxShadowOpacity: 0
