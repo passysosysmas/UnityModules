@@ -6,7 +6,7 @@ namespace Leap.Unity {
   public class Telemetry : IDisposable {
     private static uint _nestingLevel = 0;
 
-    private Controller _controller;
+    private LeapServiceProvider _provider;
     private string _filename;
 
     private uint _lineNumber;
@@ -15,7 +15,7 @@ namespace Leap.Unity {
 
     public Telemetry(LeapProvider provider, string filename) {
       if (provider is LeapServiceProvider) {
-        _controller = (provider as LeapServiceProvider).GetLeapController();
+        _provider = (provider as LeapServiceProvider);
       }
 
       //#if UNITY_EDITOR || !UNITY_ANDROID
@@ -26,11 +26,11 @@ namespace Leap.Unity {
     }
 
     public IDisposable Sample(uint lineNumber, string zoneName) {
-      if (_controller == null) {
+      if (_provider == null) {
         return null;
       } else {
         _nestingLevel++;
-        _start = _controller.TelemetryGetNow();
+        _start = _provider.GetLeapController().TelemetryGetNow();
         _lineNumber = lineNumber;
         _zoneName = zoneName;
         return this;
@@ -40,16 +40,14 @@ namespace Leap.Unity {
     public void Dispose() {
       _nestingLevel--;
 
-      UnityEngine.Debug.Log("Uploading telemetry data ... ");
-
-      ulong end = _controller.TelemetryGetNow();
-      _controller.TelemetryProfiling((uint)Thread.CurrentThread.ManagedThreadId,
-                                     _start,
-                                     end,
-                                     _nestingLevel,
-                                     _filename,
-                                     _lineNumber,
-                                     _zoneName);
+      ulong end = _provider.GetLeapController().TelemetryGetNow();
+      _provider.GetLeapController().TelemetryProfiling((uint)Thread.CurrentThread.ManagedThreadId,
+                                                       _start,
+                                                       end,
+                                                       _nestingLevel,
+                                                       _filename,
+                                                       _lineNumber,
+                                                       _zoneName);
     }
   }
 }
