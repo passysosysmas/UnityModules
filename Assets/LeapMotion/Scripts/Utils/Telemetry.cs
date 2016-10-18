@@ -18,9 +18,9 @@ namespace Leap.Unity {
         _controller = (provider as LeapServiceProvider).GetLeapController();
       }
 
-#if UNITY_EDITOR || !UNITY_ANDROID
-      _controller = null;
-#endif
+//#if UNITY_EDITOR || !UNITY_ANDROID
+//      _controller = null;
+//#endif
 
       _filename = filename;
     }
