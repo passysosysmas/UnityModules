@@ -556,7 +556,7 @@ namespace Leap.Unity.Interaction {
     }
 
     protected virtual void Awake() {
-      _telemetry = new Telemetry(_leapProvider as LeapServiceProvider, "InteractionManager");
+      _telemetry = new Telemetry(_leapProvider, "InteractionManager");
 
       if (_autoGenerateLayers) {
         autoGenerateLayers();

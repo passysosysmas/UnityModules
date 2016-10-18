@@ -19,6 +19,8 @@ namespace Leap.Unity {
     protected bool graphicsEnabled = true;
     protected bool physicsEnabled = true;
 
+    protected Telemetry _telemetry;
+
     public bool GraphicsEnabled {
       get {
         return graphicsEnabled;
@@ -47,6 +49,8 @@ namespace Leap.Unity {
       provider = requireComponent<LeapProvider>();
       factory = requireComponent<HandFactory>();
 
+      _telemetry = new Telemetry(provider, "HandController");
+
       provider.OnUpdateFrame += OnUpdateFrame;
       provider.OnFixedFrame += OnFixedFrame;
     }
@@ -59,14 +63,18 @@ namespace Leap.Unity {
     /** Updates the graphics HandRepresentations. */
     protected virtual void OnUpdateFrame(Frame frame) {
       if (frame != null && graphicsEnabled) {
-        UpdateHandRepresentations(graphicsReps, ModelType.Graphics, frame);
+        using (_telemetry.Sample(66, "Update Graphical Representations")) {
+          UpdateHandRepresentations(graphicsReps, ModelType.Graphics, frame);
+        }
       }
     }
 
     /** Updates the physics HandRepresentations. */
     protected virtual void OnFixedFrame(Frame frame) {
       if (frame != null && physicsEnabled) {
-        UpdateHandRepresentations(physicsReps, ModelType.Physics, frame);
+        using (_telemetry.Sample(75, "Update Physics Representations")) {
+          UpdateHandRepresentations(physicsReps, ModelType.Physics, frame);
+        }
       }
     }
 
