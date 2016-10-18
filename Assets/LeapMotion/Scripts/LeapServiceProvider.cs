@@ -73,6 +73,7 @@ namespace Leap.Unity {
     protected Image _currentImage;
 
     protected Matrix4x4[] _transformArray = new Matrix4x4[2];
+    protected Telemetry _telemetry;
 
     public override Frame CurrentFrame {
       get {
@@ -184,6 +185,8 @@ namespace Leap.Unity {
     protected virtual void Awake() {
       _fixedOffset.delay = 0.4f;
       _smoothedTrackingLatency.SetBlend(0.99f, 0.0111f);
+
+      _telemetry = new Telemetry(this, "LeapServiceProvider");
     }
 
     protected virtual void Start() {
@@ -197,58 +200,77 @@ namespace Leap.Unity {
     }
 
     protected virtual void Update() {
-      UInt64 start = leap_controller_.TelemetryGetNow ();
+      using (_telemetry.Sample(200, "Update")) {
 #if UNITY_EDITOR
-      if (EditorApplication.isCompiling) {
-        EditorApplication.isPlaying = false;
-        Debug.LogWarning("Unity hot reloading not currently supported. Stopping Editor Playback.");
-        return;
-      }
+        if (EditorApplication.isCompiling) {
+          EditorApplication.isPlaying = false;
+          Debug.LogWarning("Unity hot reloading not currently supported. Stopping Editor Playback.");
+          return;
+        }
 #endif
 
-      if (!_updateHandInPrecull && _prevUpdateHandInPrecull) {
-        resetTransforms();
-      }
-      _prevUpdateHandInPrecull = _updateHandInPrecull;
+        if (!_updateHandInPrecull && _prevUpdateHandInPrecull) {
+          resetTransforms();
+        }
+        _prevUpdateHandInPrecull = _updateHandInPrecull;
 
-      _fixedOffset.Update(Time.time - Time.fixedTime, Time.deltaTime);
+        _fixedOffset.Update(Time.time - Time.fixedTime, Time.deltaTime);
 
-      if (_useInterpolation) {
+        if (_useInterpolation) {
+          using (_telemetry.Sample(217, "Interpolate Update Frame")) {
 #if !UNITY_ANDROID
-        _smoothedTrackingLatency.value = Mathf.Min(_smoothedTrackingLatency.value, 30000f);
-        _smoothedTrackingLatency.Update((float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), Time.deltaTime);
+            _smoothedTrackingLatency.value = Mathf.Min(_smoothedTrackingLatency.value, 30000f);
+            _smoothedTrackingLatency.Update((float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), Time.deltaTime);
 #endif
-        leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, CalculateInterpolationTime());
-      } else {
-        leap_controller_.Frame(_untransformedUpdateFrame);
-      }
+            leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, CalculateInterpolationTime());
+          }
+        } else {
+          using (_telemetry.Sample(225, "Get Update Frame")) {
+            leap_controller_.Frame(_untransformedUpdateFrame);
+          }
+        }
 
-      if (_untransformedUpdateFrame != null) {
-        transformFrame(_untransformedUpdateFrame, _transformedUpdateFrame);
+        if (_untransformedUpdateFrame != null) {
+          using (_telemetry.Sample(231, "Transform Update Frame")) {
+            transformFrame(_untransformedUpdateFrame, _transformedUpdateFrame);
+          }
 
-        DispatchUpdateFrameEvent(_transformedUpdateFrame);
+          using (_telemetry.Sample(235, "Dispatch Update Frame")) {
+            DispatchUpdateFrameEvent(_transformedUpdateFrame);
+          }
+        }
+        manualUpdateHasBeenCalledSinceUpdate = false;
       }
-      manualUpdateHasBeenCalledSinceUpdate = false;
-      UInt64 end = leap_controller_.TelemetryGetNow ();
-      leap_controller_.TelemetryProfiling ((uint)Thread.CurrentThread.ManagedThreadId, start, end, 0, "LeapServiceProvider", 199, "Update");
     }
 
     protected virtual void FixedUpdate() {
-      if (_reuseFramesForPhysics) {
-        DispatchFixedFrameEvent(_transformedUpdateFrame);
-        return;
-      }
+      using (_telemetry.Sample(244, "Fixed Update")) {
+        if (_reuseFramesForPhysics) {
+          using (_telemetry.Sample(246, "Dispatch Fixed Frame")) {
+            DispatchFixedFrameEvent(_transformedUpdateFrame);
+          }
+          return;
+        }
 
-      if (_useInterpolation) {
-        leap_controller_.GetInterpolatedFrame(_untransformedFixedFrame, CalculateInterpolationTime());
-      } else {
-        leap_controller_.Frame(_untransformedFixedFrame);
-      }
+        if (_useInterpolation) {
+          using (_telemetry.Sample(253, "Interpolate Fixed Frame")) {
+            leap_controller_.GetInterpolatedFrame(_untransformedFixedFrame, CalculateInterpolationTime());
+          }
+        } else {
+          using (_telemetry.Sample(257, "Get Fixed Frame")) {
+            leap_controller_.Frame(_untransformedFixedFrame);
+          }
+        }
 
-      if (_untransformedFixedFrame != null) {
-        transformFrame(_untransformedFixedFrame, _transformedFixedFrame);
+        if (_untransformedFixedFrame != null) {
+          using (_telemetry.Sample(263, "Transform Fixed Frame")) {
+            transformFrame(_untransformedFixedFrame, _transformedFixedFrame);
+          }
 
-        DispatchFixedFrameEvent(_transformedFixedFrame);
+          using (_telemetry.Sample(267, "Dispatch Fixed Frame")) {
+            DispatchFixedFrameEvent(_transformedFixedFrame);
+          }
+        }
       }
     }
 
@@ -269,7 +291,7 @@ namespace Leap.Unity {
 #if UNITY_ANDROID
       return leap_controller_.Now() - ((_interpolationDelay + temporalOffset + 16) * 1000);
 #else
-      return leap_controller_.Now() - (long)_smoothedTrackingLatency.value - (_interpolationDelay + temporalOffset * 1000) + (_updateHandInPrecull&&!endOfFrame ? (long)(Time.smoothDeltaTime * S_TO_NS / Time.timeScale) : 0);
+      return leap_controller_.Now() - (long)_smoothedTrackingLatency.value - (_interpolationDelay + temporalOffset * 1000) + (_updateHandInPrecull && !endOfFrame ? (long)(Time.smoothDeltaTime * S_TO_NS / Time.timeScale) : 0);
 #endif
     }
 
@@ -377,7 +399,7 @@ namespace Leap.Unity {
 
     public void LateUpdateHandTransforms(Camera camera) {
       if (_updateHandInPrecull) {
-       // if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.BeginSample("Vertex Offset", RealtimeGraph.GraphUnits.Miliseconds); }
+        // if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.BeginSample("Vertex Offset", RealtimeGraph.GraphUnits.Miliseconds); }
 
 #if UNITY_EDITOR
         //Hard-coded name of the camera used to generate the pre-render view
