@@ -143,6 +143,8 @@ namespace Leap.Unity.Interaction {
     private List<INTERACTION_DEBUG_LINE> _debugLines = new List<INTERACTION_DEBUG_LINE>();
     //A temp list that is recycled.  Used to recieve debug logs from InteractionC.
     private List<string> _debugOutput = new List<string>();
+
+    private Telemetry _telemetry;
     #endregion
 
     #region PUBLIC METHODS
@@ -554,6 +556,8 @@ namespace Leap.Unity.Interaction {
     }
 
     protected virtual void Awake() {
+      _telemetry = new Telemetry(_leapProvider as LeapServiceProvider, "InteractionManager");
+
       if (_autoGenerateLayers) {
         autoGenerateLayers();
         autoSetupCollisionLayers();
@@ -620,59 +624,73 @@ namespace Leap.Unity.Interaction {
     }
 
     protected virtual void FixedUpdate() {
-      Frame frame = _leapProvider.CurrentFixedFrame;
+      using (_telemetry.Sample(627, "Fixed Update")) {
+        Frame frame = _leapProvider.CurrentFixedFrame;
 
-      if (OnPrePhysicalUpdate != null) {
-        OnPrePhysicalUpdate();
-      }
-
-      simulateFrame(frame);
-
-      if (OnPostPhysicalUpdate != null) {
-        OnPostPhysicalUpdate();
-      }
-
-      if (_showDebugLines) {
-        RuntimeGizmoDrawer gizmoDrawer;
-        if (RuntimeGizmoManager.TryGetGizmoDrawer(gameObject, out gizmoDrawer)) {
-          InteractionC.GetDebugLines(ref _scene, _debugLines);
-          for (int i = 0; i < _debugLines.Count; i++) {
-            var line = _debugLines[i];
-            gizmoDrawer.color = line.color.ToUnityColor();
-            gizmoDrawer.DrawLine(line.start.ToVector3(), line.end.ToVector3());
+        if (OnPrePhysicalUpdate != null) {
+          using (_telemetry.Sample(631, "Pre Physics Update")) {
+            OnPrePhysicalUpdate();
           }
         }
-      }
 
-      if (_showDebugOutput) {
-        InteractionC.GetDebugStrings(ref _scene, _debugOutput);
+        using (_telemetry.Sample(636, "Simulate Frame")) {
+          simulateFrame(frame);
+        }
+
+        if (OnPostPhysicalUpdate != null) {
+          using (_telemetry.Sample(641, "Post Physics Update")) {
+            OnPostPhysicalUpdate();
+          }
+        }
+
+        if (_showDebugLines) {
+          RuntimeGizmoDrawer gizmoDrawer;
+          if (RuntimeGizmoManager.TryGetGizmoDrawer(gameObject, out gizmoDrawer)) {
+            InteractionC.GetDebugLines(ref _scene, _debugLines);
+            for (int i = 0; i < _debugLines.Count; i++) {
+              var line = _debugLines[i];
+              gizmoDrawer.color = line.color.ToUnityColor();
+              gizmoDrawer.DrawLine(line.start.ToVector3(), line.end.ToVector3());
+            }
+          }
+        }
+
+        if (_showDebugOutput) {
+          InteractionC.GetDebugStrings(ref _scene, _debugOutput);
+        }
       }
     }
 
     protected virtual void LateUpdate() {
-      Frame frame = _leapProvider.CurrentFrame;
+      using (_telemetry.Sample(665, "Late Update")) {
+        Frame frame = _leapProvider.CurrentFrame;
 
-      dispatchOnHandsHoldingAll(frame, isPhysics: false);
+        using (_telemetry.Sample(668, "Dispatch On Hand Holding")) {
+          dispatchOnHandsHoldingAll(frame, isPhysics: false);
+        }
 
-      _activityManager.UnregisterMisbehavingObjects();
+        _activityManager.UnregisterMisbehavingObjects();
 
-      if (OnGraphicalUpdate != null) {
-        OnGraphicalUpdate();
-      }
-
-      if (_showDebugOutput && _debugTextView != null) {
-        string text = "";
-        for (int i = 0; i < _debugOutput.Count; i++) {
-          text += _debugOutput[i];
-          if (i != _debugOutput.Count - 1) {
-            text += "\n";
+        if (OnGraphicalUpdate != null) {
+          using (_telemetry.Sample(675, "Graphical Update")) {
+            OnGraphicalUpdate();
           }
         }
-        _debugTextView.text = text;
-      }
 
-      if (_automaticValidation) {
-        Validate();
+        if (_showDebugOutput && _debugTextView != null) {
+          string text = "";
+          for (int i = 0; i < _debugOutput.Count; i++) {
+            text += _debugOutput[i];
+            if (i != _debugOutput.Count - 1) {
+              text += "\n";
+            }
+          }
+          _debugTextView.text = text;
+        }
+
+        if (_automaticValidation) {
+          Validate();
+        }
       }
     }
 
@@ -731,28 +749,46 @@ namespace Leap.Unity.Interaction {
     }
 
     protected virtual void simulateFrame(Frame frame) {
-      _activityManager.UpdateState(frame);
+      using (_telemetry.Sample(752, "Update Activity Manager")) {
+        _activityManager.UpdateState(frame);
+      }
 
       var active = _activityManager.ActiveBehaviours;
 
-      for (int i = 0; i < active.Count; i++) {
-        active[i].NotifyPreSolve();
+      using (_telemetry.Sample(758, "Notify Pre-Solve")) {
+        for (int i = 0; i < active.Count; i++) {
+          active[i].NotifyPreSolve();
+        }
       }
 
-      dispatchOnHandsHoldingAll(frame, isPhysics: true);
+      using (_telemetry.Sample(764, "Dispatch On Hands Holding")) {
+        dispatchOnHandsHoldingAll(frame, isPhysics: true);
+      }
 
-      updateInteractionRepresentations();
+      using (_telemetry.Sample(768, "Update Representations")) {
+        updateInteractionRepresentations();
+      }
 
-      updateTracking(frame);
+      using (_telemetry.Sample(772, "Update Tracking")) {
+        updateTracking(frame);
+      }
 
-      simulateInteraction();
+      using (_telemetry.Sample(776, "Simulate Interaction")) {
+        simulateInteraction();
+      }
 
-      updateInteractionStateChanges(frame);
+      using (_telemetry.Sample(780, "Update State Changes")) {
+        updateInteractionStateChanges(frame);
+      }
 
-      dispatchSimulationResults();
+      using (_telemetry.Sample(784, "Dispatch Simulation Results")) {
+        dispatchSimulationResults();
+      }
 
-      for (int i = 0; i < active.Count; i++) {
-        active[i].NotifyPostSolve();
+      using (_telemetry.Sample(788, "Notify Post-Solve")) {
+        for (int i = 0; i < active.Count; i++) {
+          active[i].NotifyPostSolve();
+        }
       }
     }
 
