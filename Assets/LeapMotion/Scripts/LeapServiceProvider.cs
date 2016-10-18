@@ -4,6 +4,7 @@ using UnityEditor;
 #endif
 using System;
 using System.Collections;
+using System.Threading;
 using Leap.Unity.Attributes;
 //using Leap.Unity.Graphing;
 
@@ -196,6 +197,7 @@ namespace Leap.Unity {
     }
 
     protected virtual void Update() {
+      UInt64 start = leap_controller_.TelemetryGetNow ();
 #if UNITY_EDITOR
       if (EditorApplication.isCompiling) {
         EditorApplication.isPlaying = false;
@@ -227,6 +229,8 @@ namespace Leap.Unity {
         DispatchUpdateFrameEvent(_transformedUpdateFrame);
       }
       manualUpdateHasBeenCalledSinceUpdate = false;
+      UInt64 end = leap_controller_.TelemetryGetNow ();
+      leap_controller_.TelemetryProfiling ((uint)Thread.CurrentThread.ManagedThreadId, start, end, 0, "LeapServiceProvider", 199, "Update");
     }
 
     protected virtual void FixedUpdate() {
