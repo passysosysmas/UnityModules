@@ -18,9 +18,9 @@ namespace Leap.Unity {
         _controller = (provider as LeapServiceProvider).GetLeapController();
       }
 
-//#if UNITY_EDITOR || !UNITY_ANDROID
-//      _controller = null;
-//#endif
+      //#if UNITY_EDITOR || !UNITY_ANDROID
+      //      _controller = null;
+      //#endif
 
       _filename = filename;
     }
@@ -39,6 +39,8 @@ namespace Leap.Unity {
 
     public void Dispose() {
       _nestingLevel--;
+
+      UnityEngine.Debug.Log("Uploading telemetry data ... ");
 
       ulong end = _controller.TelemetryGetNow();
       _controller.TelemetryProfiling((uint)Thread.CurrentThread.ManagedThreadId,
