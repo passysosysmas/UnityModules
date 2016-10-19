@@ -2,7 +2,7 @@
 using System.Collections;
 using Leap.Unity;
 
-public class EndOfFrameWaiter : MonoBehaviour {
+public class BasicTelemetry : MonoBehaviour {
 
   [SerializeField]
   private LeapServiceProvider _provider;
