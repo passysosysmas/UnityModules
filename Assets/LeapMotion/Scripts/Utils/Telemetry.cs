@@ -1,16 +1,11 @@
 ﻿using System;
 using System.Threading;
-using System.Collections.Generic;
 
 namespace Leap.Unity {
 
   public class Telemetry {
     private LeapServiceProvider _provider;
     private string _filename;
-
-    private uint _lineNumber;
-    private string _zoneName;
-    private ulong _start;
 
     public Telemetry(LeapProvider provider, string filename) {
       if (provider is LeapServiceProvider) {
