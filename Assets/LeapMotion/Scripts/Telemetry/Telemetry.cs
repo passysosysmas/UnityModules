@@ -1,12 +1,17 @@
-﻿using System;
+﻿using UnityEngine;
+using System;
 using System.Threading;
 
 namespace Leap.Unity {
 
   public class Telemetry {
+    private static bool _hasThreadId = false;
+    private static uint _threadId;
+
+    private static uint _nestingLevel = 0;
+
     private LeapServiceProvider _provider;
     private string _filename;
-    private uint _threadId;
 
     public Telemetry(LeapProvider provider, string filename) {
       if (provider is LeapServiceProvider) {
@@ -18,31 +23,35 @@ namespace Leap.Unity {
       _provider = null;
 #endif
 
-      _threadId = (uint)Thread.CurrentThread.ManagedThreadId;
-      _filename = filename;
+      uint threadId = (uint)Thread.CurrentThread.ManagedThreadId;
+
+      if (_hasThreadId) {
+        if (threadId != _threadId) {
+          Debug.LogError("Cannot use the Telemetry helper across multiple threads!");
+        }
+      } else {
+        _threadId = threadId;
+        _hasThreadId = true;
+      }
     }
 
     public TelemetrySample Sample(uint lineNumber, string zoneName) {
       if (_provider == null) {
         return new TelemetrySample();
       } else {
-        return new TelemetrySample(_provider.GetLeapController(), _threadId, _filename, lineNumber, zoneName);
+        return new TelemetrySample(_provider.GetLeapController(), _filename, lineNumber, zoneName);
       }
     }
 
     public struct TelemetrySample : IDisposable {
-      private static uint _nestingLevel = 0;
-
       private Controller _controller;
-      private uint _threadId;
       private ulong _start;
       private string _filename;
       private uint _lineNumber;
       private string _zoneName;
 
-      public TelemetrySample(Controller controller, uint threadId, string filename, uint lineNumber, string zoneName) {
+      public TelemetrySample(Controller controller, string filename, uint lineNumber, string zoneName) {
         _controller = controller;
-        _threadId = threadId;
         _start = controller.TelemetryGetNow();
         _filename = filename;
         _lineNumber = lineNumber;
