@@ -23,6 +23,7 @@ namespace Leap.Unity {
       _provider = null;
 #endif
 
+      _filename = filename;
       uint threadId = (uint)Thread.CurrentThread.ManagedThreadId;
 
       if (_hasThreadId) {
