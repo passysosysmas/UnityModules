@@ -6,6 +6,7 @@ namespace Leap.Unity {
   public class Telemetry {
     private LeapServiceProvider _provider;
     private string _filename;
+    private uint _threadId;
 
     public Telemetry(LeapProvider provider, string filename) {
       if (provider is LeapServiceProvider) {
@@ -13,9 +14,11 @@ namespace Leap.Unity {
       }
 
 #if UNITY_EDITOR || !UNITY_ANDROID
+      //Currently only supported on android
       _provider = null;
 #endif
 
+      _threadId = (uint)Thread.CurrentThread.ManagedThreadId;
       _filename = filename;
     }
 
@@ -23,7 +26,7 @@ namespace Leap.Unity {
       if (_provider == null) {
         return new TelemetrySample();
       } else {
-        return new TelemetrySample(_provider.GetLeapController(), _filename, lineNumber, zoneName);
+        return new TelemetrySample(_provider.GetLeapController(), _threadId, _filename, lineNumber, zoneName);
       }
     }
 
@@ -31,13 +34,15 @@ namespace Leap.Unity {
       private static uint _nestingLevel = 0;
 
       private Controller _controller;
+      private uint _threadId;
       private ulong _start;
       private string _filename;
       private uint _lineNumber;
       private string _zoneName;
 
-      public TelemetrySample(Controller controller, string filename, uint lineNumber, string zoneName) {
+      public TelemetrySample(Controller controller, uint threadId, string filename, uint lineNumber, string zoneName) {
         _controller = controller;
+        _threadId = threadId;
         _start = controller.TelemetryGetNow();
         _filename = filename;
         _lineNumber = lineNumber;
@@ -51,7 +56,7 @@ namespace Leap.Unity {
         _nestingLevel--;
 
         ulong end = _controller.TelemetryGetNow();
-        _controller.TelemetryProfiling((uint)Thread.CurrentThread.ManagedThreadId,
+        _controller.TelemetryProfiling(_threadId,
                                        _start,
                                        end,
                                        _nestingLevel,
