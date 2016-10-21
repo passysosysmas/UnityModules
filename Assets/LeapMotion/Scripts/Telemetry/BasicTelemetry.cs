@@ -31,12 +31,38 @@ public class BasicTelemetry : MonoBehaviour {
   }
 
   private Telemetry.TelemetrySample _cameraSample;
-
   private void onPreRender(Camera c) {
-    _cameraSample = _telemetry.Sample(36, "Render Camera " + c.name);
+    _cameraSample = _telemetry.Sample(36, "Render Camera");
   }
 
   private void onPostRender(Camera c) {
     _cameraSample.Dispose();
+  }
+
+  private Telemetry.TelemetrySample _fixedUpdateSample;
+  public void BeforeFixedUpdate() {
+    _fixedUpdateSample = _telemetry.Sample(45, "Fixed Update");
+  }
+
+  public void AfterFixedUpdate() {
+    _fixedUpdateSample.Dispose();
+  }
+
+  private Telemetry.TelemetrySample _updateSample;
+  public void BeforeUpdate() {
+    _updateSample = _telemetry.Sample(54, "Update");
+  }
+
+  public void AfterUpdate() {
+    _updateSample.Dispose();
+  }
+
+  private Telemetry.TelemetrySample _lateUpdateSample;
+  public void BeforeLateUpdate() {
+    _lateUpdateSample = _telemetry.Sample(64, "Late Update");
+  }
+
+  public void AfterLateUpdate() {
+    _lateUpdateSample.Dispose();
   }
 }
