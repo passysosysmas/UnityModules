@@ -1406,6 +1406,73 @@ BoxCollider:
   serializedVersion: 2
   m_Size: {x: 5, y: 5, z: 0.1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &1069768845
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  serializedVersion: 4
+  m_Component:
+  - 4: {fileID: 1069768849}
+  - 114: {fileID: 1069768848}
+  - 114: {fileID: 1069768847}
+  - 114: {fileID: 1069768846}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1069768846
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1069768845}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dca3076ba1d10824b84f947e14c4b04c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _telemetry: {fileID: 1069768848}
+--- !u!114 &1069768847
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1069768845}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b913aac137124a541af70263bd72dcb3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _telemetry: {fileID: 1069768848}
+--- !u!114 &1069768848
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1069768845}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d317203c172e71d46a39f68634a4b22e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _provider: {fileID: 1571656282}
+--- !u!4 &1069768849
+Transform:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1069768845}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -5.4977384, y: -3.4807703, z: 1.6642612}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 4
 --- !u!1 &1102362655
 GameObject:
   m_ObjectHideFlags: 0
@@ -2402,10 +2469,10 @@ MonoBehaviour:
   _isHeadMounted: 1
   _temporalWarping: {fileID: 1411119371}
   _reuseFramesForPhysics: 0
-  _overrideDeviceType: 0
+  _overrideDeviceType: 1
   _overrideDeviceTypeWith: 1
   _useInterpolation: 1
-  _interpolationDelay: 15
+  _updateHandInPrecull: 0
 --- !u!4 &1571656283
 Transform:
   m_ObjectHideFlags: 0
