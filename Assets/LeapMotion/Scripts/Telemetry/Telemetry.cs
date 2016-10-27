@@ -56,9 +56,10 @@ namespace Leap.Unity.Profiling {
 
       _nestingLevel = 0;
 
+      StartCoroutine(waitForEndOfFrameCoroutine());
+
 #if UNITY_ANDROID && !UNITY_EDITOR
       StartCoroutine(startWorkerThreadCoroutine());
-      StartCoroutine(waitForEndOfFrameCoroutine());
 #endif
     }
 
@@ -167,7 +168,7 @@ namespace Leap.Unity.Profiling {
       }
 
       public void Dispose() {
-        if (_isWorkerThreadRunning) {
+        if (_nestingLevel != 0) {
           --_nestingLevel;
           data.endTime = LeapC.TelemetryGetNow();
           _sampleBuffer.TryPush(ref data);
