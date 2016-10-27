@@ -1,17 +1,17 @@
-﻿using UnityEngine;
-using System;
+﻿using System;
 using System.Threading;
+using System.Runtime.InteropServices;
+using LeapInternal;
 
 namespace Leap.Unity {
 
   public class Telemetry {
-    private static bool _hasThreadId = false;
-    private static uint _threadId;
-
     private static uint _nestingLevel = 0;
 
     private LeapServiceProvider _provider;
+    private Controller _controller;
     private string _filename;
+    private uint _threadId;
 
     public Telemetry(LeapProvider provider, string filename) {
       if (provider is LeapServiceProvider) {
@@ -23,41 +23,43 @@ namespace Leap.Unity {
       _provider = null;
 #endif
 
-      _filename = filename;
       uint threadId = (uint)Thread.CurrentThread.ManagedThreadId;
 
-      if (_hasThreadId) {
-        if (threadId != _threadId) {
-          Debug.LogError("Cannot use the Telemetry helper across multiple threads!");
-        }
-      } else {
-        _threadId = threadId;
-        _hasThreadId = true;
-      }
+      _filename = filename;
     }
 
     public TelemetrySample Sample(uint lineNumber, string zoneName) {
-      if (_provider == null) {
-        return new TelemetrySample();
-      } else {
-        return new TelemetrySample(_provider.GetLeapController(), _filename, lineNumber, zoneName);
+      if (_controller == null) {
+        if (_provider == null) {
+          return new TelemetrySample();
+        } else {
+          _controller = _provider.GetLeapController();
+          if (_controller == null) {
+            return new TelemetrySample();
+          }
+        }
       }
+
+      return new TelemetrySample(_controller, _filename, lineNumber, zoneName, _threadId);
     }
 
+    [StructLayout(LayoutKind.Sequential)]
     public struct TelemetrySample : IDisposable {
+      public LEAP_TELEMETRY_DATA data;
       private Controller _controller;
-      private ulong _start;
-      private string _filename;
-      private uint _lineNumber;
-      private string _zoneName;
+      public bool isValid;
 
-      public TelemetrySample(Controller controller, string filename, uint lineNumber, string zoneName) {
+      public TelemetrySample(Controller controller, string filename, uint lineNumber, string zoneName, uint threadId) {
         _controller = controller;
-        _start = controller.TelemetryGetNow();
-        _filename = filename;
-        _lineNumber = lineNumber;
-        _zoneName = zoneName;
-        _nestingLevel++;
+
+        data.startTime = LeapC.TelemetryGetNow();
+        data.endTime = 0;
+        data.threadId = threadId;
+        data.zoneDepth = _nestingLevel++;
+        data.fileName = filename;
+        data.lineNumber = lineNumber;
+        data.zoneName = zoneName;
+        isValid = true;
       }
 
       public void Dispose() {
@@ -65,14 +67,8 @@ namespace Leap.Unity {
 
         _nestingLevel--;
 
-        ulong end = _controller.TelemetryGetNow();
-        _controller.TelemetryProfiling(_threadId,
-                                       _start,
-                                       end,
-                                       _nestingLevel,
-                                       _filename,
-                                       _lineNumber,
-                                       _zoneName);
+        data.endTime = LeapC.TelemetryGetNow();
+        BasicTelemetry.AddSample(ref this);
       }
     }
   }
