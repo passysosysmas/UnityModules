@@ -1,12 +1,12 @@
 ﻿using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
-using Leap;
+using Leap.Unity.Profiling;
 
 namespace Leap.Unity {
   /**
    * LeapHandController uses a Factory to create and update HandRepresentations based on Frame's received from a Provider  */
   public class LeapHandController : MonoBehaviour {
+    public const string F_N = "LeapHandController";
     protected LeapProvider provider;
     protected HandFactory factory;
 
@@ -19,7 +19,7 @@ namespace Leap.Unity {
     protected bool graphicsEnabled = true;
     protected bool physicsEnabled = true;
 
-    protected Telemetry _telemetry;
+    private Telemetry _telemetry;
 
     public bool GraphicsEnabled {
       get {
@@ -49,7 +49,7 @@ namespace Leap.Unity {
       provider = requireComponent<LeapProvider>();
       factory = requireComponent<HandFactory>();
 
-      _telemetry = new Telemetry(provider, "HandController");
+      _telemetry = Telemetry.instance;
 
       provider.OnUpdateFrame += OnUpdateFrame;
       provider.OnFixedFrame += OnFixedFrame;
@@ -63,7 +63,7 @@ namespace Leap.Unity {
     /** Updates the graphics HandRepresentations. */
     protected virtual void OnUpdateFrame(Frame frame) {
       if (frame != null && graphicsEnabled) {
-        using (_telemetry.Sample(66, "Update Graphical Representations")) {
+        using (_telemetry.Sample(F_N, 66, "Update Graphical Representations")) {
           UpdateHandRepresentations(graphicsReps, ModelType.Graphics, frame);
         }
       }
@@ -72,7 +72,7 @@ namespace Leap.Unity {
     /** Updates the physics HandRepresentations. */
     protected virtual void OnFixedFrame(Frame frame) {
       if (frame != null && physicsEnabled) {
-        using (_telemetry.Sample(75, "Update Physics Representations")) {
+        using (_telemetry.Sample(F_N, 75, "Update Physics Representations")) {
           UpdateHandRepresentations(physicsReps, ModelType.Physics, frame);
         }
       }

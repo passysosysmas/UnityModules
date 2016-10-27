@@ -2,15 +2,13 @@
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
-using System;
-using System.Collections;
-using System.Threading;
 using Leap.Unity.Attributes;
-//using Leap.Unity.Graphing;
+using Leap.Unity.Profiling;
 
 namespace Leap.Unity {
   /**LeapServiceProvider creates a Controller and supplies Leap Hands and images */
   public class LeapServiceProvider : LeapProvider {
+    protected const string F_N = "LeapServiceProvider";
     /** Conversion factor for nanoseconds to seconds. */
     protected const float NS_TO_S = 1e-6f;
     /** Conversion factor for seconds to nanoseconds. */
@@ -186,7 +184,7 @@ namespace Leap.Unity {
       _fixedOffset.delay = 0.4f;
       _smoothedTrackingLatency.SetBlend(0.99f, 0.0111f);
 
-      _telemetry = new Telemetry(this, "LeapServiceProvider");
+      _telemetry = Telemetry.instance;
     }
 
     protected virtual void Start() {
@@ -200,7 +198,7 @@ namespace Leap.Unity {
     }
 
     protected virtual void Update() {
-      using (_telemetry.Sample(200, "Update")) {
+      using (_telemetry.Sample(F_N, 200, "Update")) {
 #if UNITY_EDITOR
         if (EditorApplication.isCompiling) {
           EditorApplication.isPlaying = false;
@@ -217,7 +215,7 @@ namespace Leap.Unity {
         _fixedOffset.Update(Time.time - Time.fixedTime, Time.deltaTime);
 
         if (_useInterpolation) {
-          using (_telemetry.Sample(217, "Interpolate Update Frame")) {
+          using (_telemetry.Sample(F_N, 217, "Interpolate Update Frame")) {
 #if !UNITY_ANDROID
             _smoothedTrackingLatency.value = Mathf.Min(_smoothedTrackingLatency.value, 30000f);
             _smoothedTrackingLatency.Update((float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), Time.deltaTime);
@@ -225,17 +223,17 @@ namespace Leap.Unity {
             leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, CalculateInterpolationTime());
           }
         } else {
-          using (_telemetry.Sample(225, "Get Update Frame")) {
+          using (_telemetry.Sample(F_N, 225, "Get Update Frame")) {
             leap_controller_.Frame(_untransformedUpdateFrame);
           }
         }
 
         if (_untransformedUpdateFrame != null) {
-          using (_telemetry.Sample(231, "Transform Update Frame")) {
+          using (_telemetry.Sample(F_N, 231, "Transform Update Frame")) {
             transformFrame(_untransformedUpdateFrame, _transformedUpdateFrame);
           }
 
-          using (_telemetry.Sample(235, "Dispatch Update Frame")) {
+          using (_telemetry.Sample(F_N, 235, "Dispatch Update Frame")) {
             DispatchUpdateFrameEvent(_transformedUpdateFrame);
           }
         }
@@ -244,30 +242,30 @@ namespace Leap.Unity {
     }
 
     protected virtual void FixedUpdate() {
-      using (_telemetry.Sample(244, "Fixed Update")) {
+      using (_telemetry.Sample(F_N, 244, "Fixed Update")) {
         if (_reuseFramesForPhysics) {
-          using (_telemetry.Sample(246, "Dispatch Fixed Frame")) {
+          using (_telemetry.Sample(F_N, 246, "Dispatch Fixed Frame")) {
             DispatchFixedFrameEvent(_transformedUpdateFrame);
           }
           return;
         }
 
         if (_useInterpolation) {
-          using (_telemetry.Sample(253, "Interpolate Fixed Frame")) {
+          using (_telemetry.Sample(F_N, 253, "Interpolate Fixed Frame")) {
             leap_controller_.GetInterpolatedFrame(_untransformedFixedFrame, CalculateInterpolationTime());
           }
         } else {
-          using (_telemetry.Sample(257, "Get Fixed Frame")) {
+          using (_telemetry.Sample(F_N, 257, "Get Fixed Frame")) {
             leap_controller_.Frame(_untransformedFixedFrame);
           }
         }
 
         if (_untransformedFixedFrame != null) {
-          using (_telemetry.Sample(263, "Transform Fixed Frame")) {
+          using (_telemetry.Sample(F_N, 263, "Transform Fixed Frame")) {
             transformFrame(_untransformedFixedFrame, _transformedFixedFrame);
           }
 
-          using (_telemetry.Sample(267, "Dispatch Fixed Frame")) {
+          using (_telemetry.Sample(F_N, 267, "Dispatch Fixed Frame")) {
             DispatchFixedFrameEvent(_transformedFixedFrame);
           }
         }
@@ -399,39 +397,41 @@ namespace Leap.Unity {
 
     public void LateUpdateHandTransforms(Camera camera) {
       if (_updateHandInPrecull) {
-        // if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.BeginSample("Vertex Offset", RealtimeGraph.GraphUnits.Miliseconds); }
+        using (_telemetry.Sample(F_N, 399, "Late Latch")) {
+          // if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.BeginSample("Vertex Offset", RealtimeGraph.GraphUnits.Miliseconds); }
 
 #if UNITY_EDITOR
-        //Hard-coded name of the camera used to generate the pre-render view
-        if (camera.gameObject.name == "PreRenderCamera") {
-          return;
-        }
+          //Hard-coded name of the camera used to generate the pre-render view
+          if (camera.gameObject.name == "PreRenderCamera") {
+            return;
+          }
 
-        bool isScenePreviewCamera = camera.gameObject.hideFlags == HideFlags.HideAndDontSave;
-        if (isScenePreviewCamera) {
-          return;
-        }
+          bool isScenePreviewCamera = camera.gameObject.hideFlags == HideFlags.HideAndDontSave;
+          if (isScenePreviewCamera) {
+            return;
+          }
 #endif
 
-        if (Application.isPlaying && !manualUpdateHasBeenCalledSinceUpdate) {
-          ManualUpdateFrame();
-          if (_transformedPreCullFrame != null) {
-            //if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.AddSample("Precull Tracking Latency", RealtimeGraph.GraphUnits.Miliseconds, (GetLeapController().Now() - _transformedPreCullFrame.Timestamp) * 0.001f); }
-            for (int i = 0; i < _transformedPreCullFrame.Hands.Count; i++) {
-              Hand preCullHand = _transformedPreCullFrame.Hands[i];
-              Hand updateHand = _transformedUpdateFrame.Hand(preCullHand.Id);
+          if (Application.isPlaying && !manualUpdateHasBeenCalledSinceUpdate) {
+            ManualUpdateFrame();
+            if (_transformedPreCullFrame != null) {
+              //if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.AddSample("Precull Tracking Latency", RealtimeGraph.GraphUnits.Miliseconds, (GetLeapController().Now() - _transformedPreCullFrame.Timestamp) * 0.001f); }
+              for (int i = 0; i < _transformedPreCullFrame.Hands.Count; i++) {
+                Hand preCullHand = _transformedPreCullFrame.Hands[i];
+                Hand updateHand = _transformedUpdateFrame.Hand(preCullHand.Id);
 
-              if (preCullHand != null && updateHand != null) {
-                //Pass PreCullHand * Inverse(UpdateHand) to the shader
-                _transformArray[_transformedPreCullFrame.Hands[i].IsLeft ? 1 : 0] =
-                                    Matrix4x4.TRS(preCullHand.PalmPosition.ToVector3(), preCullHand.Rotation.ToQuaternion(), Vector3.one) *
-                  Matrix4x4.Inverse(Matrix4x4.TRS(updateHand.PalmPosition.ToVector3(), updateHand.Rotation.ToQuaternion(), Vector3.one));
+                if (preCullHand != null && updateHand != null) {
+                  //Pass PreCullHand * Inverse(UpdateHand) to the shader
+                  _transformArray[_transformedPreCullFrame.Hands[i].IsLeft ? 1 : 0] =
+                                      Matrix4x4.TRS(preCullHand.PalmPosition.ToVector3(), preCullHand.Rotation.ToQuaternion(), Vector3.one) *
+                    Matrix4x4.Inverse(Matrix4x4.TRS(updateHand.PalmPosition.ToVector3(), updateHand.Rotation.ToQuaternion(), Vector3.one));
+                }
               }
             }
+            Shader.SetGlobalMatrixArray(HAND_ARRAY, _transformArray);
           }
-          Shader.SetGlobalMatrixArray(HAND_ARRAY, _transformArray);
+          //if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.EndSample(); }
         }
-        //if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.EndSample(); }
       }
     }
   }

@@ -1,74 +1,177 @@
-﻿using System;
+﻿using UnityEngine;
+using System;
+using System.Collections;
 using System.Threading;
 using System.Runtime.InteropServices;
 using LeapInternal;
 
-namespace Leap.Unity {
+namespace Leap.Unity.Profiling {
 
-  public class Telemetry {
-    private static uint _nestingLevel = 0;
+  public class Telemetry : MonoBehaviour {
+    public const string F_N = "Telemetry";
+    public const int BUFFER_SIZE = 4096;
 
-    private LeapServiceProvider _provider;
-    private Controller _controller;
-    private string _filename;
-    private uint _threadId;
+    public static uint _nestingLevel = 0;
+    private static ProduceConsumeBuffer<LEAP_TELEMETRY_DATA> _sampleBuffer = new ProduceConsumeBuffer<LEAP_TELEMETRY_DATA>(BUFFER_SIZE);
 
-    public Telemetry(LeapProvider provider, string filename) {
-      if (provider is LeapServiceProvider) {
-        _provider = (provider as LeapServiceProvider);
-      }
-
-#if UNITY_EDITOR || !UNITY_ANDROID
-      //Currently only supported on android
-      _provider = null;
-#endif
-
-      uint threadId = (uint)Thread.CurrentThread.ManagedThreadId;
-
-      _filename = filename;
-    }
-
-    public TelemetrySample Sample(uint lineNumber, string zoneName) {
-      if (_controller == null) {
-        if (_provider == null) {
-          return new TelemetrySample();
-        } else {
-          _controller = _provider.GetLeapController();
-          if (_controller == null) {
-            return new TelemetrySample();
+    private static Telemetry _cachedInstance = null;
+    public static Telemetry instance {
+      get {
+        if (_cachedInstance == null) {
+          _cachedInstance = FindObjectOfType<Telemetry>();
+          if (_cachedInstance == null) {
+            GameObject obj = new GameObject("__Telemetry__");
+            obj.SetActive(false);
+            _cachedInstance = obj.AddComponent<Telemetry>();
           }
         }
+        return _cachedInstance;
       }
+    }
 
-      return new TelemetrySample(_controller, _filename, lineNumber, zoneName, _threadId);
+    [SerializeField]
+    private LeapServiceProvider _provider;
+
+    private Controller _controller;
+    private uint _threadId;
+
+    private static bool _isWorkerThreadRunning = false;
+    private Thread _workerThread;
+
+    public TelemetrySample Sample(string filename, int lineNumber, string zoneName) {
+      if (_isWorkerThreadRunning) {
+        return new TelemetrySample(filename, (uint)lineNumber, zoneName, _threadId);
+      } else {
+        return new TelemetrySample();
+      }
+    }
+
+    void Awake() {
+      _threadId = (uint)Thread.CurrentThread.ManagedThreadId;
+    }
+
+    void OnEnable() {
+      Camera.onPreRender += onPreRender;
+      Camera.onPostRender += onPostRender;
+
+      _nestingLevel = 0;
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+      StartCoroutine(startWorkerThreadCoroutine());
+      StartCoroutine(waitForEndOfFrameCoroutine());
+#endif
+    }
+
+    void OnDisable() {
+      Camera.onPreRender -= onPreRender;
+      Camera.onPostRender -= onPostRender;
+
+      if (_isWorkerThreadRunning) {
+        _isWorkerThreadRunning = false;
+        _workerThread.Abort();
+        _workerThread.Join();
+      }
+    }
+
+    IEnumerator startWorkerThreadCoroutine() {
+      while (true) {
+        if (_provider == null) {
+          _provider = FindObjectOfType<LeapServiceProvider>();
+          yield return null;
+          continue;
+        }
+
+        _controller = _provider.GetLeapController();
+        if (_controller == null) {
+          yield return null;
+          continue;
+        }
+
+        _workerThread = new Thread(new ThreadStart(workerThread));
+        _isWorkerThreadRunning = true;
+        _workerThread.Start();
+        yield break;
+      }
+    }
+
+    IEnumerator waitForEndOfFrameCoroutine() {
+      WaitForEndOfFrame waiter = new WaitForEndOfFrame();
+      while (true) {
+        var sample = Sample(F_N, 17, "Frame");
+        yield return waiter;
+        sample.Dispose();
+      }
+    }
+
+    private void workerThread() {
+      LEAP_TELEMETRY_DATA data;
+
+      while (_isWorkerThreadRunning) {
+        Thread.Sleep(500);
+
+        while (_sampleBuffer.TryPop(out data)) {
+          _controller.TelemetryProfiling(ref data);
+        }
+      }
+    }
+
+    private TelemetrySample _cameraSample;
+    private void onPreRender(Camera c) {
+      _cameraSample = Sample(F_N, 36, "Render Camera");
+    }
+
+    private void onPostRender(Camera c) {
+      _cameraSample.Dispose();
+    }
+
+    private TelemetrySample _fixedUpdateSample;
+    public void BeforeFixedUpdate() {
+      _fixedUpdateSample = Sample(F_N, 45, "Fixed Update");
+    }
+
+    public void AfterFixedUpdate() {
+      _fixedUpdateSample.Dispose();
+    }
+
+    private TelemetrySample _updateSample;
+    public void BeforeUpdate() {
+      _updateSample = Sample(F_N, 54, "Update");
+    }
+
+    public void AfterUpdate() {
+      _updateSample.Dispose();
+    }
+
+    private TelemetrySample _lateUpdateSample;
+    public void BeforeLateUpdate() {
+      _lateUpdateSample = Sample(F_N, 64, "Late Update");
+    }
+
+    public void AfterLateUpdate() {
+      _lateUpdateSample.Dispose();
     }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct TelemetrySample : IDisposable {
+      private static uint _nestingLevel = 0;
       public LEAP_TELEMETRY_DATA data;
-      private Controller _controller;
-      public bool isValid;
 
-      public TelemetrySample(Controller controller, string filename, uint lineNumber, string zoneName, uint threadId) {
-        _controller = controller;
-
+      public TelemetrySample(string filename, uint lineNumber, string zoneName, uint threadId) {
         data.startTime = LeapC.TelemetryGetNow();
         data.endTime = 0;
         data.threadId = threadId;
-        data.zoneDepth = _nestingLevel++;
         data.fileName = filename;
         data.lineNumber = lineNumber;
         data.zoneName = zoneName;
-        isValid = true;
+        data.zoneDepth = _nestingLevel++;
       }
 
       public void Dispose() {
-        if (_controller == null) return;
-
-        _nestingLevel--;
-
-        data.endTime = LeapC.TelemetryGetNow();
-        BasicTelemetry.AddSample(ref this);
+        if (_isWorkerThreadRunning) {
+          --_nestingLevel;
+          data.endTime = LeapC.TelemetryGetNow();
+          _sampleBuffer.TryPush(ref data);
+        }
       }
     }
   }

@@ -1,16 +1,15 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.VR;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
-using UnityEngine.Serialization;
 using System.Collections.Generic;
-using Leap.Unity;
-using Leap;
+using Leap.Unity.Profiling;
 
 namespace Leap.Unity.InputModule {
   /** An InputModule that supports the use of Leap Motion tracking data for manipulating Unity UI controls. */
   public class LeapInputModule : BaseInputModule {
+    private const string F_N = "LeapInputModule";
+
     //General Interaction Parameters
     [Header(" Interaction Setup")]
     [Tooltip("The current Leap Data Provider for the scene.")]
@@ -211,7 +210,7 @@ namespace Leap.Unity.InputModule {
     protected override void Start() {
       base.Start();
 
-      _telemetry = new Telemetry(LeapDataProvider, "LeapInputModule");
+      _telemetry = Telemetry.instance;
 
       if (LeapDataProvider == null) {
         LeapDataProvider = FindObjectOfType<LeapProvider>();
@@ -307,7 +306,7 @@ namespace Leap.Unity.InputModule {
 
     //Update the Head Yaw for Calculating "Shoulder Positions"
     void Update() {
-      using (_telemetry.Sample(310, "Update")) {
+      using (_telemetry.Sample(F_N, 310, "Update")) {
         curFrame = LeapDataProvider.CurrentFrame;
 
         if (Camera.main != null) {
@@ -319,7 +318,7 @@ namespace Leap.Unity.InputModule {
 
     //Process is called by UI system to process events
     public override void Process() {
-      using (_telemetry.Sample(322, "Process")) {
+      using (_telemetry.Sample(F_N, 322, "Process")) {
         OldCameraPos = Camera.main.transform.position;
         OldCameraRot = Camera.main.transform.rotation;
         OldCameraFoV = Camera.main.fieldOfView;

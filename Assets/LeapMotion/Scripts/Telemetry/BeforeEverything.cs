@@ -1,19 +1,26 @@
 ﻿using UnityEngine;
 
-public class BeforeEverything : MonoBehaviour {
+namespace Leap.Unity.Profiling {
 
-  [SerializeField]
-  private BasicTelemetry _telemetry;
+  public class BeforeEverything : MonoBehaviour {
 
-  void FixedUpdate() {
-    _telemetry.BeforeFixedUpdate();
-  }
+    [SerializeField]
+    private Telemetry _telemetry;
 
-  void Update() {
-    _telemetry.BeforeUpdate();
-  }
+    void Awake() {
+      if (_telemetry == null) _telemetry = GetComponent<Telemetry>();
+    }
 
-  void LateUpdate() {
-    _telemetry.BeforeLateUpdate();
+    void FixedUpdate() {
+      _telemetry.BeforeFixedUpdate();
+    }
+
+    void Update() {
+      _telemetry.BeforeUpdate();
+    }
+
+    void LateUpdate() {
+      _telemetry.BeforeLateUpdate();
+    }
   }
 }
