@@ -51,6 +51,7 @@ namespace Leap.Unity.Profiling {
     }
 
     void OnEnable() {
+      Camera.onPreCull += onPreCull;
       Camera.onPreRender += onPreRender;
       Camera.onPostRender += onPostRender;
 
@@ -64,6 +65,7 @@ namespace Leap.Unity.Profiling {
     }
 
     void OnDisable() {
+      Camera.onPreCull -= onPreCull;
       Camera.onPreRender -= onPreRender;
       Camera.onPostRender -= onPostRender;
 
@@ -97,10 +99,13 @@ namespace Leap.Unity.Profiling {
 
     IEnumerator waitForEndOfFrameCoroutine() {
       WaitForEndOfFrame waiter = new WaitForEndOfFrame();
+      var stopwatch = new System.Diagnostics.Stopwatch();
       while (true) {
+        stopwatch.Reset();
+        stopwatch.Start();
         var sample = Sample(F_N, 17, "_");
         yield return waiter;
-        sample.data.zoneName = Time.deltaTime > 1.5f / 60.0f ? "Dropped Frame" : "Frame";
+        sample.data.zoneName = stopwatch.Elapsed.TotalSeconds > 1.25f / 60.0f ? "Dropped Frame" : "Frame";
         sample.Dispose();
       }
     }
@@ -120,6 +125,11 @@ namespace Leap.Unity.Profiling {
     private TelemetrySample _cullSample;
     private bool _hasCullSample = false;
     private void onPreCull(Camera c) {
+      if (_hasCullSample) {
+        _cullSample.Dispose();
+        _hasCullSample = false;
+      }
+
       _cullSample = Sample(F_N, 122, "Pre Cull");
       _hasCullSample = true;
     }
