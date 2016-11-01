@@ -171,6 +171,8 @@ namespace Leap.Unity.Profiling {
         if (_nestingLevel != 0) {
           --_nestingLevel;
           data.endTime = LeapC.TelemetryGetNow();
+          
+          //If buffer is full we just drop samples, no retry
           _sampleBuffer.TryPush(ref data);
         }
       }
