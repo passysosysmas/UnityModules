@@ -98,8 +98,9 @@ namespace Leap.Unity.Profiling {
     IEnumerator waitForEndOfFrameCoroutine() {
       WaitForEndOfFrame waiter = new WaitForEndOfFrame();
       while (true) {
-        var sample = Sample(F_N, 17, "Frame");
+        var sample = Sample(F_N, 17, "_");
         yield return waiter;
+        sample.data.zoneName = Time.deltaTime > 1.5f / 60.0f ? "Dropped Frame" : "Frame";
         sample.Dispose();
       }
     }
@@ -116,8 +117,20 @@ namespace Leap.Unity.Profiling {
       }
     }
 
+    private TelemetrySample _cullSample;
+    private bool _hasCullSample = false;
+    private void onPreCull(Camera c) {
+      _cullSample = Sample(F_N, 122, "Pre Cull");
+      _hasCullSample = true;
+    }
+
     private TelemetrySample _cameraSample;
     private void onPreRender(Camera c) {
+      if (_hasCullSample) {
+        _cullSample.Dispose();
+        _hasCullSample = false;
+      }
+
       _cameraSample = Sample(F_N, 36, "Render Camera");
     }
 
@@ -171,7 +184,7 @@ namespace Leap.Unity.Profiling {
         if (_nestingLevel != 0) {
           --_nestingLevel;
           data.endTime = LeapC.TelemetryGetNow();
-          
+
           //If buffer is full we just drop samples, no retry
           _sampleBuffer.TryPush(ref data);
         }
