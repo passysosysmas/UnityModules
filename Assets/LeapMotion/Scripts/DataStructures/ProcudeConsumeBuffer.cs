@@ -18,8 +18,11 @@ public class ProduceConsumeBuffer<T> {
   }
 
   public bool TryPush(ref T t) {
+    uint nextTail = (_tail + 1) & _bufferMask;
+    if (nextTail == _head) return false;
+
     _buffer[_tail] = t;
-    _tail = (_tail + 1) & _bufferMask;
+    _tail = nextTail;
     return true;
   }
 

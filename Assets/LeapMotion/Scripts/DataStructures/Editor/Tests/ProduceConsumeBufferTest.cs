@@ -5,13 +5,13 @@ using NUnit.Framework;
 
 namespace Leap.Unity.Tests {
 
-  public class ProduceConsumeBufferTest : MonoBehaviour {
+  public class ProduceConsumeBufferTest {
 
     private ProduceConsumeBuffer<TestStruct> buffer;
 
     [SetUp]
     public void Setup() {
-      buffer = new ProduceConsumeBuffer<TestStruct>(1024);
+      buffer = new ProduceConsumeBuffer<TestStruct>(16);
     }
 
     [TearDown]
@@ -20,6 +20,7 @@ namespace Leap.Unity.Tests {
     }
 
     [Test]
+    [Timeout(1000)]
     public void Test() {
       Thread consumer = new Thread(new ThreadStart(consumerThread));
       Thread producer = new Thread(new ThreadStart(producerThread));
@@ -37,7 +38,7 @@ namespace Leap.Unity.Tests {
           TestStruct s;
           s.index = i;
           s.name = i.ToString();
-          buffer.TryPush(ref s);
+          while (!buffer.TryPush(ref s)) { }
         }
       } catch (Exception e) {
         Assert.Fail(e.Message);
