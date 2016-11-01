@@ -11,7 +11,7 @@ public class ProduceConsumeBuffer<T> {
     _tail = 0;
   }
 
-  public int Length {
+  public int Capacity {
     get {
       return _buffer.Length;
     }

@@ -34,7 +34,7 @@ namespace Leap.Unity.Tests {
 
     private void consumerThread() {
       try {
-        for (int i = 0; i < buffer.Length; i++) {
+        for (int i = 0; i < buffer.Capacity; i++) {
           TestStruct s;
           s.index = i;
           s.name = i.ToString();
@@ -47,7 +47,7 @@ namespace Leap.Unity.Tests {
 
     private void producerThread() {
       try {
-        for (int i = 0; i < buffer.Length; i++) {
+        for (int i = 0; i < buffer.Capacity; i++) {
           TestStruct s;
           while (!buffer.TryPop(out s)) { }
 
