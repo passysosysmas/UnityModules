@@ -145,8 +145,6 @@ namespace Leap.Unity.Interaction {
     private List<INTERACTION_DEBUG_LINE> _debugLines = new List<INTERACTION_DEBUG_LINE>();
     //A temp list that is recycled.  Used to recieve debug logs from InteractionC.
     private List<string> _debugOutput = new List<string>();
-
-    private Telemetry _telemetry;
     #endregion
 
     #region PUBLIC METHODS
@@ -558,8 +556,6 @@ namespace Leap.Unity.Interaction {
     }
 
     protected virtual void Awake() {
-      _telemetry = Telemetry.instance;
-
       if (_autoGenerateLayers) {
         autoGenerateLayers();
         autoSetupCollisionLayers();
@@ -626,21 +622,21 @@ namespace Leap.Unity.Interaction {
     }
 
     protected virtual void FixedUpdate() {
-      using (_telemetry.Sample(F_N, 627, "Fixed Update")) {
+      using (Telemetry.Sample(F_N, 627, "Fixed Update")) {
         Frame frame = _leapProvider.CurrentFixedFrame;
 
         if (OnPrePhysicalUpdate != null) {
-          using (_telemetry.Sample(F_N, 631, "Pre Physics Update")) {
+          using (Telemetry.Sample(F_N, 631, "Pre Physics Update")) {
             OnPrePhysicalUpdate();
           }
         }
 
-        using (_telemetry.Sample(F_N, 636, "Simulate Frame")) {
+        using (Telemetry.Sample(F_N, 636, "Simulate Frame")) {
           simulateFrame(frame);
         }
 
         if (OnPostPhysicalUpdate != null) {
-          using (_telemetry.Sample(F_N, 641, "Post Physics Update")) {
+          using (Telemetry.Sample(F_N, 641, "Post Physics Update")) {
             OnPostPhysicalUpdate();
           }
         }
@@ -664,17 +660,17 @@ namespace Leap.Unity.Interaction {
     }
 
     protected virtual void LateUpdate() {
-      using (_telemetry.Sample(F_N, 665, "Late Update")) {
+      using (Telemetry.Sample(F_N, 665, "Late Update")) {
         Frame frame = _leapProvider.CurrentFrame;
 
-        using (_telemetry.Sample(F_N, 668, "Dispatch On Hand Holding")) {
+        using (Telemetry.Sample(F_N, 668, "Dispatch On Hand Holding")) {
           dispatchOnHandsHoldingAll(frame, isPhysics: false);
         }
 
         _activityManager.UnregisterMisbehavingObjects();
 
         if (OnGraphicalUpdate != null) {
-          using (_telemetry.Sample(F_N, 675, "Graphical Update")) {
+          using (Telemetry.Sample(F_N, 675, "Graphical Update")) {
             OnGraphicalUpdate();
           }
         }
@@ -751,43 +747,43 @@ namespace Leap.Unity.Interaction {
     }
 
     protected virtual void simulateFrame(Frame frame) {
-      using (_telemetry.Sample(F_N, 752, "Update Activity Manager")) {
+      using (Telemetry.Sample(F_N, 752, "Update Activity Manager")) {
         _activityManager.UpdateState(frame);
       }
 
       var active = _activityManager.ActiveBehaviours;
 
-      using (_telemetry.Sample(F_N, 758, "Notify Pre-Solve")) {
+      using (Telemetry.Sample(F_N, 758, "Notify Pre-Solve")) {
         for (int i = 0; i < active.Count; i++) {
           active[i].NotifyPreSolve();
         }
       }
 
-      using (_telemetry.Sample(F_N, 764, "Dispatch On Hands Holding")) {
+      using (Telemetry.Sample(F_N, 764, "Dispatch On Hands Holding")) {
         dispatchOnHandsHoldingAll(frame, isPhysics: true);
       }
 
-      using (_telemetry.Sample(F_N, 768, "Update Representations")) {
+      using (Telemetry.Sample(F_N, 768, "Update Representations")) {
         updateInteractionRepresentations();
       }
 
-      using (_telemetry.Sample(F_N, 772, "Update Tracking")) {
+      using (Telemetry.Sample(F_N, 772, "Update Tracking")) {
         updateTracking(frame);
       }
 
-      using (_telemetry.Sample(F_N, 776, "Simulate Interaction")) {
+      using (Telemetry.Sample(F_N, 776, "Simulate Interaction")) {
         simulateInteraction();
       }
 
-      using (_telemetry.Sample(F_N, 780, "Update State Changes")) {
+      using (Telemetry.Sample(F_N, 780, "Update State Changes")) {
         updateInteractionStateChanges(frame);
       }
 
-      using (_telemetry.Sample(F_N, 784, "Dispatch Simulation Results")) {
+      using (Telemetry.Sample(F_N, 784, "Dispatch Simulation Results")) {
         dispatchSimulationResults();
       }
 
-      using (_telemetry.Sample(F_N, 788, "Notify Post-Solve")) {
+      using (Telemetry.Sample(F_N, 788, "Notify Post-Solve")) {
         for (int i = 0; i < active.Count; i++) {
           active[i].NotifyPostSolve();
         }

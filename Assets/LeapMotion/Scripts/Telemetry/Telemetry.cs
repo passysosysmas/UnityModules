@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Threading;
 using System.Runtime.InteropServices;
 using LeapInternal;
@@ -9,37 +10,18 @@ namespace Leap.Unity.Profiling {
 
   public class Telemetry : MonoBehaviour {
     public const string F_N = "Telemetry";
-    public const int BUFFER_SIZE = 4096;
+    public const int SAMPLES_PER_BUFFER = 32768;
+
+    private static int _currSampleCount = 0;
+    private static LEAP_TELEMETRY_DATA[] _currSampleBuffer = new LEAP_TELEMETRY_DATA[SAMPLES_PER_BUFFER];
+    private static List<LEAP_TELEMETRY_DATA[]> _sampleList = new List<LEAP_TELEMETRY_DATA[]>(24);
+    private static Telemetry _cachedInstance = null;
 
     public static uint _nestingLevel = 0;
-    private static ProduceConsumeBuffer<LEAP_TELEMETRY_DATA> _sampleBuffer = new ProduceConsumeBuffer<LEAP_TELEMETRY_DATA>(BUFFER_SIZE);
-
-    private static Telemetry _cachedInstance = null;
-    public static Telemetry instance {
-      get {
-        if (_cachedInstance == null) {
-          _cachedInstance = FindObjectOfType<Telemetry>();
-          if (_cachedInstance == null) {
-            GameObject obj = new GameObject("__Telemetry__");
-            obj.SetActive(false);
-            _cachedInstance = obj.AddComponent<Telemetry>();
-          }
-        }
-        return _cachedInstance;
-      }
-    }
-
-    [SerializeField]
-    private LeapServiceProvider _provider;
-
-    private Controller _controller;
-    private uint _threadId;
-
-    private static bool _isWorkerThreadRunning = false;
-    private Thread _workerThread;
-
-    public TelemetrySample Sample(string filename, int lineNumber, string zoneName) {
-      if (_isWorkerThreadRunning) {
+    private static uint _threadId;
+    private static bool _canSample;
+    public static TelemetrySample Sample(string filename, int lineNumber, string zoneName) {
+      if (_canSample) {
         return new TelemetrySample(filename, (uint)lineNumber, zoneName, _threadId);
       } else {
         return new TelemetrySample();
@@ -47,7 +29,19 @@ namespace Leap.Unity.Profiling {
     }
 
     void Awake() {
+      if (_cachedInstance != null && _cachedInstance != this) {
+        Debug.LogError("Cannot be more than one instance of the telemetry object in the scene!");
+        DestroyImmediate(gameObject);
+      }
+      _cachedInstance = this;
+
       _threadId = (uint)Thread.CurrentThread.ManagedThreadId;
+    }
+
+    void OnDestroy() {
+      if (_cachedInstance == this) {
+        _cachedInstance = null;
+      }
     }
 
     void OnEnable() {
@@ -56,12 +50,10 @@ namespace Leap.Unity.Profiling {
       Camera.onPostRender += onPostRender;
 
       _nestingLevel = 0;
-
       StartCoroutine(waitForEndOfFrameCoroutine());
 
-#if UNITY_ANDROID && !UNITY_EDITOR
-      StartCoroutine(startWorkerThreadCoroutine());
-#endif
+      _sampleList.Add(_currSampleBuffer);
+      _canSample = true;
     }
 
     void OnDisable() {
@@ -69,31 +61,39 @@ namespace Leap.Unity.Profiling {
       Camera.onPreRender -= onPreRender;
       Camera.onPostRender -= onPostRender;
 
-      if (_isWorkerThreadRunning) {
-        _isWorkerThreadRunning = false;
-        _workerThread.Abort();
-        _workerThread.Join();
-      }
+      _canSample = false;
     }
 
-    IEnumerator startWorkerThreadCoroutine() {
-      while (true) {
-        if (_provider == null) {
-          _provider = FindObjectOfType<LeapServiceProvider>();
-          yield return null;
-          continue;
+    void Update() {
+      if (Input.GetKeyDown(KeyCode.Mouse0)) {
+        var controller = FindObjectOfType<LeapServiceProvider>().GetLeapController();
+        if (controller == null) return;
+
+        LEAP_TELEMETRY_DATA data;
+
+        for (int i = 0; i < _sampleList.Count; i++) {
+          LEAP_TELEMETRY_DATA[] buffer = _sampleList[i];
+          int count = i == _sampleList.Count - 1 ? _currSampleCount : SAMPLES_PER_BUFFER;
+
+          Debug.Log("Submitting " + count + " telemetry samples.");
+
+          for (int j = 0; j < count; j++) {
+            data = buffer[j];
+
+            if (j < 10) {
+              Debug.Log(data.startTime);
+              Debug.Log(data.endTime);
+              Debug.Log(data.fileName);
+              Debug.Log(data.zoneName);
+            }
+
+            controller.TelemetryProfiling(ref data);
+          }
         }
 
-        _controller = _provider.GetLeapController();
-        if (_controller == null) {
-          yield return null;
-          continue;
-        }
-
-        _workerThread = new Thread(new ThreadStart(workerThread));
-        _isWorkerThreadRunning = true;
-        _workerThread.Start();
-        yield break;
+        _sampleList.Clear();
+        _sampleList.Add(_currSampleBuffer);
+        _currSampleCount = 0;
       }
     }
 
@@ -107,18 +107,6 @@ namespace Leap.Unity.Profiling {
         yield return waiter;
         sample.data.zoneName = stopwatch.Elapsed.TotalSeconds > 1.25f / 60.0f ? "Dropped Frame" : "Frame";
         sample.Dispose();
-      }
-    }
-
-    private void workerThread() {
-      LEAP_TELEMETRY_DATA data;
-
-      while (_isWorkerThreadRunning) {
-        Thread.Sleep(500);
-
-        while (_sampleBuffer.TryPop(out data)) {
-          _controller.TelemetryProfiling(ref data);
-        }
       }
     }
 
@@ -148,17 +136,33 @@ namespace Leap.Unity.Profiling {
       _cameraSample.Dispose();
     }
 
+    private TelemetrySample _physicsSimulationSample;
+    private bool _hasStartedPhysicsSim = false;
+
     private TelemetrySample _fixedUpdateSample;
     public void BeforeFixedUpdate() {
+      if (_hasStartedPhysicsSim) {
+        _hasStartedPhysicsSim = false;
+        _physicsSimulationSample.Dispose();
+      }
+
       _fixedUpdateSample = Sample(F_N, 45, "Fixed Update");
     }
 
     public void AfterFixedUpdate() {
       _fixedUpdateSample.Dispose();
+
+      _physicsSimulationSample = Sample(F_N, 167, "PhysX Update");
+      _hasStartedPhysicsSim = true;
     }
 
     private TelemetrySample _updateSample;
     public void BeforeUpdate() {
+      if (_hasStartedPhysicsSim) {
+        _hasStartedPhysicsSim = false;
+        _physicsSimulationSample.Dispose();
+      }
+
       _updateSample = Sample(F_N, 54, "Update");
     }
 
@@ -195,8 +199,14 @@ namespace Leap.Unity.Profiling {
           --_nestingLevel;
           data.endTime = LeapC.TelemetryGetNow();
 
-          //If buffer is full we just drop samples, no retry
-          _sampleBuffer.TryPush(ref data);
+          _currSampleBuffer[_currSampleCount++] = data;
+          if (_currSampleCount == SAMPLES_PER_BUFFER) {
+            using (Sample(F_N, 192, "Allocate New Telemetry Buffer")) {
+              _currSampleBuffer = new LEAP_TELEMETRY_DATA[SAMPLES_PER_BUFFER];
+              _currSampleCount = 0;
+              _sampleList.Add(_currSampleBuffer);
+            }
+          }
         }
       }
     }

@@ -190,8 +190,6 @@ namespace Leap.Unity.InputModule {
     private Quaternion OldCameraRot = Quaternion.identity;
     private float OldCameraFoV;
 
-    private Telemetry _telemetry;
-
     //Queue of Spheres to Debug Draw
     private Queue<Vector3> DebugSphereQueue;
 
@@ -209,8 +207,6 @@ namespace Leap.Unity.InputModule {
     //Initialization
     protected override void Start() {
       base.Start();
-
-      _telemetry = Telemetry.instance;
 
       if (LeapDataProvider == null) {
         LeapDataProvider = FindObjectOfType<LeapProvider>();
@@ -306,7 +302,7 @@ namespace Leap.Unity.InputModule {
 
     //Update the Head Yaw for Calculating "Shoulder Positions"
     void Update() {
-      using (_telemetry.Sample(F_N, 310, "Update")) {
+      using (Telemetry.Sample(F_N, 310, "Update")) {
         curFrame = LeapDataProvider.CurrentFrame;
 
         if (Camera.main != null) {
@@ -318,7 +314,7 @@ namespace Leap.Unity.InputModule {
 
     //Process is called by UI system to process events
     public override void Process() {
-      using (_telemetry.Sample(F_N, 322, "Process")) {
+      using (Telemetry.Sample(F_N, 322, "Process")) {
         OldCameraPos = Camera.main.transform.position;
         OldCameraRot = Camera.main.transform.rotation;
         OldCameraFoV = Camera.main.fieldOfView;

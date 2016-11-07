@@ -71,7 +71,6 @@ namespace Leap.Unity {
     protected Image _currentImage;
 
     protected Matrix4x4[] _transformArray = new Matrix4x4[2];
-    protected Telemetry _telemetry;
 
     public override Frame CurrentFrame {
       get {
@@ -183,8 +182,6 @@ namespace Leap.Unity {
     protected virtual void Awake() {
       _fixedOffset.delay = 0.4f;
       _smoothedTrackingLatency.SetBlend(0.99f, 0.0111f);
-
-      _telemetry = Telemetry.instance;
     }
 
     protected virtual void Start() {
@@ -198,7 +195,7 @@ namespace Leap.Unity {
     }
 
     protected virtual void Update() {
-      using (_telemetry.Sample(F_N, 200, "Update")) {
+      using (Telemetry.Sample(F_N, 200, "Update")) {
 #if UNITY_EDITOR
         if (EditorApplication.isCompiling) {
           EditorApplication.isPlaying = false;
@@ -215,7 +212,7 @@ namespace Leap.Unity {
         _fixedOffset.Update(Time.time - Time.fixedTime, Time.deltaTime);
 
         if (_useInterpolation) {
-          using (_telemetry.Sample(F_N, 217, "Interpolate Update Frame")) {
+          using (Telemetry.Sample(F_N, 217, "Interpolate Update Frame")) {
 #if !UNITY_ANDROID
             _smoothedTrackingLatency.value = Mathf.Min(_smoothedTrackingLatency.value, 30000f);
             _smoothedTrackingLatency.Update((float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), Time.deltaTime);
@@ -223,17 +220,17 @@ namespace Leap.Unity {
             leap_controller_.GetInterpolatedFrame(_untransformedUpdateFrame, CalculateInterpolationTime());
           }
         } else {
-          using (_telemetry.Sample(F_N, 225, "Get Update Frame")) {
+          using (Telemetry.Sample(F_N, 225, "Get Update Frame")) {
             leap_controller_.Frame(_untransformedUpdateFrame);
           }
         }
 
         if (_untransformedUpdateFrame != null) {
-          using (_telemetry.Sample(F_N, 231, "Transform Update Frame")) {
+          using (Telemetry.Sample(F_N, 231, "Transform Update Frame")) {
             transformFrame(_untransformedUpdateFrame, _transformedUpdateFrame);
           }
 
-          using (_telemetry.Sample(F_N, 235, "Dispatch Update Frame")) {
+          using (Telemetry.Sample(F_N, 235, "Dispatch Update Frame")) {
             DispatchUpdateFrameEvent(_transformedUpdateFrame);
           }
         }
@@ -242,30 +239,30 @@ namespace Leap.Unity {
     }
 
     protected virtual void FixedUpdate() {
-      using (_telemetry.Sample(F_N, 244, "Fixed Update")) {
+      using (Telemetry.Sample(F_N, 244, "Fixed Update")) {
         if (_reuseFramesForPhysics) {
-          using (_telemetry.Sample(F_N, 246, "Dispatch Fixed Frame")) {
+          using (Telemetry.Sample(F_N, 246, "Dispatch Fixed Frame")) {
             DispatchFixedFrameEvent(_transformedUpdateFrame);
           }
           return;
         }
 
         if (_useInterpolation) {
-          using (_telemetry.Sample(F_N, 253, "Interpolate Fixed Frame")) {
+          using (Telemetry.Sample(F_N, 253, "Interpolate Fixed Frame")) {
             leap_controller_.GetInterpolatedFrame(_untransformedFixedFrame, CalculateInterpolationTime());
           }
         } else {
-          using (_telemetry.Sample(F_N, 257, "Get Fixed Frame")) {
+          using (Telemetry.Sample(F_N, 257, "Get Fixed Frame")) {
             leap_controller_.Frame(_untransformedFixedFrame);
           }
         }
 
         if (_untransformedFixedFrame != null) {
-          using (_telemetry.Sample(F_N, 263, "Transform Fixed Frame")) {
+          using (Telemetry.Sample(F_N, 263, "Transform Fixed Frame")) {
             transformFrame(_untransformedFixedFrame, _transformedFixedFrame);
           }
 
-          using (_telemetry.Sample(F_N, 267, "Dispatch Fixed Frame")) {
+          using (Telemetry.Sample(F_N, 267, "Dispatch Fixed Frame")) {
             DispatchFixedFrameEvent(_transformedFixedFrame);
           }
         }
@@ -397,7 +394,7 @@ namespace Leap.Unity {
 
     public void LateUpdateHandTransforms(Camera camera) {
       if (_updateHandInPrecull) {
-        using (_telemetry.Sample(F_N, 399, "Late Latch")) {
+        using (Telemetry.Sample(F_N, 399, "Late Latch")) {
           // if (RealtimeGraph.Instance != null) { RealtimeGraph.Instance.BeginSample("Vertex Offset", RealtimeGraph.GraphUnits.Miliseconds); }
 
 #if UNITY_EDITOR
