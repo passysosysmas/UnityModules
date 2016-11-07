@@ -20,6 +20,7 @@ namespace Leap.Unity.Profiling {
     public static uint _nestingLevel = 0;
     private static uint _threadId;
     private static bool _canSample;
+
     public static TelemetrySample Sample(string filename, int lineNumber, string zoneName) {
       if (_canSample) {
         return new TelemetrySample(filename, (uint)lineNumber, zoneName, _threadId);
