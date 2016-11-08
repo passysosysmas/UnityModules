@@ -2,7 +2,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Threading;
 using System.Runtime.InteropServices;
 using LeapInternal;
 
@@ -18,12 +17,16 @@ namespace Leap.Unity.Profiling {
     private static Telemetry _cachedInstance = null;
 
     public static uint _nestingLevel = 0;
-    private static uint _threadId;
     private static bool _canSample;
 
-    public static TelemetrySample Sample(string filename, int lineNumber, string zoneName) {
+    private static uint _nextThreadIdentifier = 1;
+    public static uint GetUniqueThreadIdentifier() {
+      return _nextThreadIdentifier++;
+    }
+
+    public static TelemetrySample Sample(string filename, int lineNumber, string zoneName, uint threadId = 0) {
       if (_canSample) {
-        return new TelemetrySample(filename, (uint)lineNumber, zoneName, _threadId);
+        return new TelemetrySample(filename, (uint)lineNumber, zoneName, threadId);
       } else {
         return new TelemetrySample();
       }
@@ -35,8 +38,6 @@ namespace Leap.Unity.Profiling {
         DestroyImmediate(gameObject);
       }
       _cachedInstance = this;
-
-      _threadId = (uint)Thread.CurrentThread.ManagedThreadId;
     }
 
     void OnDestroy() {
