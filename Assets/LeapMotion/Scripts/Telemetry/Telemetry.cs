@@ -16,7 +16,7 @@ namespace Leap.Unity.Profiling {
     private static List<LEAP_TELEMETRY_DATA[]> _sampleList = new List<LEAP_TELEMETRY_DATA[]>(24);
     private static Telemetry _cachedInstance = null;
 
-    public static uint _nestingLevel = 0;
+    private static uint[] _nextingLevels = new uint[128];
     private static bool _canSample;
 
     private static uint _nextThreadIdentifier = 1;
@@ -51,7 +51,9 @@ namespace Leap.Unity.Profiling {
       Camera.onPreRender += onPreRender;
       Camera.onPostRender += onPostRender;
 
-      _nestingLevel = 0;
+      for (int i = 0; i < 128; i++) {
+        _nextingLevels[i] = 0;
+      }
       StartCoroutine(waitForEndOfFrameCoroutine());
 
       _sampleList.Add(_currSampleBuffer);
@@ -183,7 +185,6 @@ namespace Leap.Unity.Profiling {
 
     [StructLayout(LayoutKind.Sequential)]
     public struct TelemetrySample : IDisposable {
-      private static uint _nestingLevel = 0;
       public LEAP_TELEMETRY_DATA data;
 
       public TelemetrySample(string filename, uint lineNumber, string zoneName, uint threadId) {
@@ -193,12 +194,12 @@ namespace Leap.Unity.Profiling {
         data.fileName = filename;
         data.lineNumber = lineNumber;
         data.zoneName = zoneName;
-        data.zoneDepth = _nestingLevel++;
+        data.zoneDepth = _nextingLevels[threadId]++;
       }
 
       public void Dispose() {
-        if (_nestingLevel != 0) {
-          --_nestingLevel;
+        if (_nextingLevels[data.threadId] != 0) {
+          --_nextingLevels[data.threadId];
           data.endTime = LeapC.TelemetryGetNow();
 
           _currSampleBuffer[_currSampleCount++] = data;
