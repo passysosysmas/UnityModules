@@ -1,9 +1,11 @@
 ﻿using UnityEngine;
+using Leap.Unity.Attributes;
 
 namespace Leap.Unity.Profiling {
 
   public class BeforeEverything : MonoBehaviour {
 
+    [AutoFind]
     [SerializeField]
     private Telemetry _telemetry;
 
