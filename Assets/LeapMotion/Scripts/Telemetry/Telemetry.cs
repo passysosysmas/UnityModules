@@ -24,6 +24,12 @@ namespace Leap.Unity.Profiling {
       return _nextThreadIdentifier++;
     }
 
+    [SerializeField]
+    private KeyCode _submitKey = KeyCode.F9;
+
+    [SerializeField]
+    private KeyCode _submitKeyUnlock = KeyCode.LeftShift;
+
     public static TelemetrySample Sample(string filename, int lineNumber, string zoneName, uint threadId = 0) {
       if (_canSample) {
         return new TelemetrySample(filename, (uint)lineNumber, zoneName, threadId);
@@ -69,7 +75,13 @@ namespace Leap.Unity.Profiling {
     }
 
     void Update() {
-      if (Input.GetKeyDown(KeyCode.Mouse0)) {
+      bool shouldSubmit = Input.GetKeyDown(_submitKey);
+
+      if (_submitKeyUnlock != KeyCode.None) {
+        shouldSubmit &= Input.GetKey(_submitKeyUnlock);
+      }
+
+      if (shouldSubmit) {
         var controller = FindObjectOfType<LeapServiceProvider>().GetLeapController();
         if (controller == null) return;
 
