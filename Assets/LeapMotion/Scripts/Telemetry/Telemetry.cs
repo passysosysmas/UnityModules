@@ -143,14 +143,12 @@ namespace Leap.Unity.Profiling {
       _cameraSample.Dispose();
     }
 
-    private TelemetrySample _physicsSimulationSample;
-    private bool _hasStartedPhysicsSim = false;
-
+    private TelemetrySample? _physicsSimulationSample;
     private TelemetrySample _fixedUpdateSample;
     public void BeforeFixedUpdate() {
-      if (_hasStartedPhysicsSim) {
-        _hasStartedPhysicsSim = false;
-        _physicsSimulationSample.Dispose();
+      if (_physicsSimulationSample.HasValue) {
+        _physicsSimulationSample.Value.Dispose();
+        _physicsSimulationSample = null;
       }
 
       _fixedUpdateSample = Sample(F_N, 45, "Fixed Update");
@@ -160,14 +158,13 @@ namespace Leap.Unity.Profiling {
       _fixedUpdateSample.Dispose();
 
       _physicsSimulationSample = Sample(F_N, 167, "PhysX Update");
-      _hasStartedPhysicsSim = true;
     }
 
     private TelemetrySample _updateSample;
     public void BeforeUpdate() {
-      if (_hasStartedPhysicsSim) {
-        _hasStartedPhysicsSim = false;
-        _physicsSimulationSample.Dispose();
+      if (_physicsSimulationSample.HasValue) {
+        _physicsSimulationSample.Value.Dispose();
+        _physicsSimulationSample = null;
       }
 
       _updateSample = Sample(F_N, 54, "Update");
