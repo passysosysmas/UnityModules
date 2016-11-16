@@ -91,18 +91,8 @@ namespace Leap.Unity.Profiling {
           LEAP_TELEMETRY_DATA[] buffer = _sampleList[i];
           int count = i == _sampleList.Count - 1 ? _currSampleCount : SAMPLES_PER_BUFFER;
 
-          Debug.Log("Submitting " + count + " telemetry samples.");
-
           for (int j = 0; j < count; j++) {
             data = buffer[j];
-
-            if (j < 10) {
-              Debug.Log(data.startTime);
-              Debug.Log(data.endTime);
-              Debug.Log(data.fileName);
-              Debug.Log(data.zoneName);
-            }
-
             controller.TelemetryProfiling(ref data);
           }
         }
