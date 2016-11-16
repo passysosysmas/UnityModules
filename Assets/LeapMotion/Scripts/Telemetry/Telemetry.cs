@@ -25,6 +25,9 @@ namespace Leap.Unity.Profiling {
     }
 
     [SerializeField]
+    private float _expectedFramerate = 60;
+
+    [SerializeField]
     private KeyCode _submitKey = KeyCode.F9;
 
     [SerializeField]
@@ -111,28 +114,26 @@ namespace Leap.Unity.Profiling {
         stopwatch.Start();
         var sample = Sample(F_N, 17, "_");
         yield return waiter;
-        sample.data.zoneName = stopwatch.Elapsed.TotalSeconds > 1.25f / 60.0f ? "Dropped Frame" : "Frame";
+        sample.data.zoneName = stopwatch.Elapsed.TotalSeconds > 1.25f / _expectedFramerate ? "Dropped Frame" : "Frame";
         sample.Dispose();
       }
     }
 
-    private TelemetrySample _cullSample;
-    private bool _hasCullSample = false;
+    private TelemetrySample? _cullSample;
     private void onPreCull(Camera c) {
-      if (_hasCullSample) {
-        _cullSample.Dispose();
-        _hasCullSample = false;
+      if (_cullSample.HasValue) {
+        _cullSample.Value.Dispose();
+        _cullSample = null;
       }
 
       _cullSample = Sample(F_N, 122, "Pre Cull");
-      _hasCullSample = true;
     }
 
     private TelemetrySample _cameraSample;
     private void onPreRender(Camera c) {
-      if (_hasCullSample) {
-        _cullSample.Dispose();
-        _hasCullSample = false;
+      if (_cullSample.HasValue) {
+        _cullSample.Value.Dispose();
+        _cullSample = null;
       }
 
       _cameraSample = Sample(F_N, 36, "Render Camera");
