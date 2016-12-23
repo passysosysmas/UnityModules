@@ -59,7 +59,7 @@ namespace Leap.Unity {
     /** Updates the graphics HandRepresentations. */
     protected virtual void OnUpdateFrame(Frame frame) {
       if (frame != null && graphicsEnabled) {
-        using (Telemetry.Sample(F_N, 66, "Update Graphical Representations")) {
+        using (Telemetry.Sample(F_N, 62, "Update Graphical Representations")) {
           UpdateHandRepresentations(graphicsReps, ModelType.Graphics, frame);
         }
       }
@@ -68,18 +68,18 @@ namespace Leap.Unity {
     /** Updates the physics HandRepresentations. */
     protected virtual void OnFixedFrame(Frame frame) {
       if (frame != null && physicsEnabled) {
-        using (Telemetry.Sample(F_N, 75, "Update Physics Representations")) {
+        using (Telemetry.Sample(F_N, 71, "Update Physics Representations")) {
           UpdateHandRepresentations(physicsReps, ModelType.Physics, frame);
         }
       }
     }
 
-    /** 
+    /**
     * Updates HandRepresentations based in the specified HandRepresentation Dictionary.
     * Active HandRepresentation instances are updated if the hand they represent is still
     * present in the Provider's CurrentFrame; otherwise, the HandRepresentation is removed. If new
-    * Leap Hand objects are present in the Leap HandRepresentation Dictionary, new HandRepresentations are 
-    * created and added to the dictionary. 
+    * Leap Hand objects are present in the Leap HandRepresentation Dictionary, new HandRepresentations are
+    * created and added to the dictionary.
     * @param all_hand_reps = A dictionary of Leap Hand ID's with a paired HandRepresentation
     * @param modelType Filters for a type of hand model, for example, physics or graphics hands.
     * @param frame The Leap Frame containing Leap Hand data for each currently tracked hand
@@ -116,7 +116,7 @@ namespace Leap.Unity {
         }
       }
 
-      /**Inform the representation that we will no longer be giving it any hand updates 
+      /**Inform the representation that we will no longer be giving it any hand updates
        * because the corresponding hand has gone away */
       if (toBeDeleted != null) {
         all_hand_reps.Remove(toBeDeleted.HandID);

@@ -112,7 +112,7 @@ namespace Leap.Unity.Profiling {
       while (true) {
         stopwatch.Reset();
         stopwatch.Start();
-        var sample = Sample(F_N, 17, "_");
+        var sample = Sample(F_N, 115, "_");
         yield return waiter;
         sample.data.zoneName = stopwatch.Elapsed.TotalSeconds > 1.25f / _expectedFramerate ? "Dropped Frame" : "Frame";
         sample.Dispose();
@@ -126,7 +126,7 @@ namespace Leap.Unity.Profiling {
         _cullSample = null;
       }
 
-      _cullSample = Sample(F_N, 122, "Pre Cull");
+      _cullSample = Sample(F_N, 129, "Pre Cull");
     }
 
     private TelemetrySample _cameraSample;
@@ -136,7 +136,7 @@ namespace Leap.Unity.Profiling {
         _cullSample = null;
       }
 
-      _cameraSample = Sample(F_N, 36, "Render Camera");
+      _cameraSample = Sample(F_N, 139, "Render Camera");
     }
 
     private void onPostRender(Camera c) {
@@ -151,13 +151,13 @@ namespace Leap.Unity.Profiling {
         _physicsSimulationSample = null;
       }
 
-      _fixedUpdateSample = Sample(F_N, 45, "Fixed Update");
+      _fixedUpdateSample = Sample(F_N, 154, "Fixed Update");
     }
 
     public void AfterFixedUpdate() {
       _fixedUpdateSample.Dispose();
 
-      _physicsSimulationSample = Sample(F_N, 167, "PhysX Update");
+      _physicsSimulationSample = Sample(F_N, 160, "PhysX Update");
     }
 
     private TelemetrySample _updateSample;
@@ -167,7 +167,7 @@ namespace Leap.Unity.Profiling {
         _physicsSimulationSample = null;
       }
 
-      _updateSample = Sample(F_N, 54, "Update");
+      _updateSample = Sample(F_N, 170, "Update");
     }
 
     public void AfterUpdate() {
@@ -176,7 +176,7 @@ namespace Leap.Unity.Profiling {
 
     private TelemetrySample _lateUpdateSample;
     public void BeforeLateUpdate() {
-      _lateUpdateSample = Sample(F_N, 64, "Late Update");
+      _lateUpdateSample = Sample(F_N, 179, "Late Update");
     }
 
     public void AfterLateUpdate() {
@@ -204,7 +204,7 @@ namespace Leap.Unity.Profiling {
 
           _currSampleBuffer[_currSampleCount++] = data;
           if (_currSampleCount == SAMPLES_PER_BUFFER) {
-            using (Sample(F_N, 192, "Allocate New Telemetry Buffer")) {
+            using (Sample(F_N, 207, "Allocate New Telemetry Buffer")) {
               _currSampleBuffer = new LEAP_TELEMETRY_DATA[SAMPLES_PER_BUFFER];
               _currSampleCount = 0;
               _sampleList.Add(_currSampleBuffer);
