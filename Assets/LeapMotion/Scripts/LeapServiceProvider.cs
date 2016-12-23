@@ -43,15 +43,12 @@ namespace Leap.Unity {
     [SerializeField]
     protected LeapDeviceType _overrideDeviceTypeWith = LeapDeviceType.Peripheral;
 
-    [Header("Interpolation")]
-    [Tooltip("Interpolate frames to deliver smoother motion.")]
-    [SerializeField]
-    protected bool _useInterpolation = true;
-
     [Header("[Experimental]")]
     [Tooltip("Pass updated transform matrices to objects with materials using the VertexOffsetShader.")]
     [SerializeField]
     protected bool _updateHandInPrecull = false;
+
+    protected bool _useInterpolation = true;
 
 //Extrapolate on Android to compensate for the latency introduced by its graphics pipeline
 #if UNITY_ANDROID
@@ -80,6 +77,9 @@ namespace Leap.Unity {
 
     protected Matrix4x4[] _transformArray = new Matrix4x4[2];
 
+    [NonSerialized]
+    public long imageTimeStamp = 0;
+
     public override Frame CurrentFrame {
       get {
         if (_frameOptimization == FrameOptimizationMode.ReusePhysicsForUpdate) {
@@ -106,7 +106,7 @@ namespace Leap.Unity {
       }
     }
 
-    public bool UseInterpolation {
+    protected bool UseInterpolation {
       get {
         return _useInterpolation;
       }
@@ -222,6 +222,8 @@ namespace Leap.Unity {
       } else {
         leap_controller_.Frame(_untransformedUpdateFrame);
       }
+
+      imageTimeStamp = leap_controller_.FrameTimestamp();
 
       if (_untransformedUpdateFrame != null) {
         transformFrame(_untransformedUpdateFrame, _transformedUpdateFrame);
