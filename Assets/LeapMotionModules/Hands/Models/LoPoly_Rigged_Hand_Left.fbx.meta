@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: bfcd6ebbf65bea2449ce1598de5fed4b
+guid: 5413bab15c3dd4a4085a9fe254a17e96
 timeCreated: 1462995562
 licenseType: Free
 ModelImporter:
@@ -62,10 +62,11 @@ ModelImporter:
     400052: LoPoly_Hand_Mesh_Left
     400054: //RootNode
     4300000: LoPoly_Hand_Mesh_Left
+    7400000: Take 001
     9500000: //RootNode
     13700000: LoPoly_Hand_Mesh_Left
   materials:
-    importMaterials: 1
+    importMaterials: 0
     materialName: 1
     materialSearch: 1
   animations:
@@ -106,10 +107,11 @@ ModelImporter:
   tangentSpace:
     normalSmoothAngle: 60
     normalImportMode: 0
-    tangentImportMode: 0
+    tangentImportMode: 3
   importAnimation: 1
   copyAvatar: 0
   humanDescription:
+    serializedVersion: 2
     human: []
     skeleton: []
     armTwist: 0.5
@@ -120,7 +122,10 @@ ModelImporter:
     legStretch: 0.05
     feetSpacing: 0
     rootMotionBoneName: 
+    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
     hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 0
   lastHumanDescriptionAvatarSource: {instanceID: 0}
   animationType: 2
   humanoidOversampling: 1

@@ -43,26 +43,30 @@ namespace Leap.Unity {
       Gizmos.DrawIcon(transform.position, "leap_motion.png");
     }
 
-    protected virtual void Start() {
+    protected virtual void OnEnable() {
       provider = requireComponent<LeapProvider>();
       factory = requireComponent<HandFactory>();
+
+      provider.OnUpdateFrame += OnUpdateFrame;
+      provider.OnFixedFrame += OnFixedFrame;
+    }
+
+    protected virtual void OnDisable() {
+      provider.OnUpdateFrame -= OnUpdateFrame;
+      provider.OnFixedFrame -= OnFixedFrame;
     }
 
     /** Updates the graphics HandRepresentations. */
-    protected virtual void Update() {
-      Frame frame = provider.CurrentFrame;
-
+    protected virtual void OnUpdateFrame(Frame frame) {
       if (frame != null && graphicsEnabled) {
         UpdateHandRepresentations(graphicsReps, ModelType.Graphics, frame);
       }
     }
 
     /** Updates the physics HandRepresentations. */
-    protected virtual void FixedUpdate() {
-      Frame fixedFrame = provider.CurrentFixedFrame;
-
-      if (fixedFrame != null && physicsEnabled) {
-        UpdateHandRepresentations(physicsReps, ModelType.Physics, fixedFrame);
+    protected virtual void OnFixedFrame(Frame frame) {
+      if (frame != null && physicsEnabled) {
+        UpdateHandRepresentations(physicsReps, ModelType.Physics, frame);
       }
     }
 
@@ -76,8 +80,9 @@ namespace Leap.Unity {
     * @param modelType Filters for a type of hand model, for example, physics or graphics hands.
     * @param frame The Leap Frame containing Leap Hand data for each currently tracked hand
     */
-    void UpdateHandRepresentations(Dictionary<int, HandRepresentation> all_hand_reps, ModelType modelType, Frame frame) {
-      foreach (Leap.Hand curHand in frame.Hands) {
+    protected virtual void UpdateHandRepresentations(Dictionary<int, HandRepresentation> all_hand_reps, ModelType modelType, Frame frame) {
+      for (int i = 0; i < frame.Hands.Count; i++) {
+        var curHand = frame.Hands[i];
         HandRepresentation rep;
         if (!all_hand_reps.TryGetValue(curHand.Id, out rep)) {
           rep = factory.MakeHandRepresentation(curHand, modelType);
@@ -94,7 +99,8 @@ namespace Leap.Unity {
 
       /** Mark-and-sweep to finish unused HandRepresentations */
       HandRepresentation toBeDeleted = null;
-      foreach (KeyValuePair<int, HandRepresentation> r in all_hand_reps) {
+      for (var it = all_hand_reps.GetEnumerator(); it.MoveNext();) {
+        var r = it.Current;
         if (r.Value != null) {
           if (r.Value.IsMarked) {
             r.Value.IsMarked = false;

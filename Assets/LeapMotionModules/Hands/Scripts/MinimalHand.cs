@@ -32,8 +32,9 @@ namespace Leap.Unity{
   
     public override Chirality Handedness {
       get {
-        return Chirality.Either;
+        return Handedness;
       }
+      set { }
     }
   
     public override ModelType HandModelType {

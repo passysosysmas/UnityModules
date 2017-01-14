@@ -6,7 +6,7 @@ using UnityEditor;
 
 /** IHandModel defines abstract methods as a template for building Leap hand models*/
 namespace Leap.Unity {
-  public enum Chirality { Left, Right, Either };
+  public enum Chirality { Left, Right };
   public enum ModelType { Graphics, Physics };
 
   [ExecuteInEditMode]
@@ -18,7 +18,7 @@ namespace Leap.Unity {
       get { return isTracked; }
     }
 
-    public abstract Chirality Handedness { get; }
+    public abstract Chirality Handedness { get; set; }
     public abstract ModelType HandModelType { get; }
     public virtual void InitHand() {
     }
@@ -50,7 +50,15 @@ namespace Leap.Unity {
 #if UNITY_EDITOR
     void Update() {
       if (!EditorApplication.isPlaying && SupportsEditorPersistence()) {
-        Hand hand = TestHandFactory.MakeTestHand(0, 0, Handedness == Chirality.Left).TransformedCopy(UnityMatrixExtension.GetLeapMatrix(transform));
+        Transform editorPoseSpace;
+        LeapServiceProvider leapServiceProvider = FindObjectOfType<LeapServiceProvider>();
+        if (leapServiceProvider) {
+          editorPoseSpace = leapServiceProvider.transform;
+        } else {
+          editorPoseSpace = transform;
+        }
+
+        Hand hand = TestHandFactory.MakeTestHand(0, 0, Handedness == Chirality.Left).TransformedCopy(UnityMatrixExtension.GetLeapMatrix(editorPoseSpace));
         if (GetLeapHand() == null) {
           SetLeapHand(hand);
           InitHand();

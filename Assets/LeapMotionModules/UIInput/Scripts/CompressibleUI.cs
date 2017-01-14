@@ -6,35 +6,79 @@ using System;
 using System.Collections.Generic;
 
 namespace Leap.Unity.InputModule {
+  /** Supports layer-based, compressible animations that lend a 3D affordance to otherwise flat UI elements.
+    * The CompressibleUI script lets you separate the components of a UI and individual controls into 
+    * floating layers that depress when the user touches them. The CompressibleUI can make it easier for a 
+    * user to use a control. 
+    */
   public class CompressibleUI : MonoBehaviour, ILeapWidget {
+    [Tooltip("A list of RectTransforms that are floated relative to this GameObject.")]
+    /** The layers created for this CompressibleUI instance. All layers move together, but can have different float distances. */
     public Layer[] Layers;
+
+    /** The properties of a CompressibleUI layer. */
     [System.Serializable]
     public struct Layer {
+      [HideInInspector]
+      /** A name for the layer. */
+      public string Label;
+
+      [Tooltip("The child UI Element to hover above the canvas")]
+      /** The child UI Element to float above the parent element. */
       public RectTransform LayerTransform;
+      [Tooltip("The height above this (base) element that the Layer will float")]
+      /** The height above this (base) element that the Layer will float. */
       public float MaxFloatDistance;
+      [Tooltip("The minimum height that this layer can be compressed to.")]
+      /** The minimum height that this layer can be compressed to. */
       public float MinFloatDistance;
+      [Tooltip("OPTIONAL: If you have a dropshadow image that you would like to opacity fade on compression, add one here")]
+      /** An optional dropshadow image component. */
       public UnityEngine.UI.Image Shadow;
+      [Tooltip("If the shadow effect is not childed to this layer, but the layer above it (for masking purposes)")]
+      /** Whether the shadow effect is not a child of this layer, but rather, a child of the layer above it (for masking purposes). */
       public bool ShadowOnAboveLayer;
+      [Tooltip("If the event is triggered upon touching this layer (useful for ratcheted sounds)")]
+      /** Whether a layer event is triggered upon touching this layer. */
       public bool TriggerLayerEvent;
 
       [HideInInspector]
+      /** The maximum value used for drop shadow opacity. */
       public float MaxShadowOpacity;
       [HideInInspector]
+      /** The current distance at which members of the layer are floating. */
       public float CurrentFloatingDistance;
       [HideInInspector]
+      /** Whether or not a finger is touching members of this layer. */
       public bool touchingFinger;
       [HideInInspector]
+      /** The distance to the parent layer. */
       public float distanceToAboveLayer;
       [HideInInspector]
+      /** The maximum allowed distance to the parent layer. */
       public float maxDistanceToAboveLayer;
     }
 
+    [Tooltip("The movement speed of this element when the expansion event is triggered; between 0-1")]
+    /** How fast the layer will move to its distended position. */
     public float ExpandSpeed = 0.1f;
+    [Tooltip("The movement speed of this element when the compression event is triggered; between 0-1")]
+    /** How fast the layer will move to its retracted position. */
     public float ContractSpeed = 0.1f;
+    [Tooltip("Padding below the selection threshold that the element begins depressing")]
+    /** Padding added before a control enters the hovered state. */
     public float PushPaddingDistance = 0.01f;
     //public bool RetractWhenOutsideofTouchingDistance = false;
 
-    public UnityEvent LayerCollapseStateChange;
+    [Tooltip("Triggered when the layers that have 'TriggerLayerEvent' enabled go from 'Expanded' to 'Partially Expanded'")]
+    /** Dispatched when the layer is depressed, if TriggerLayerEvent is set to true. */
+    public UnityEvent LayerDepress;
+    [Tooltip("Triggered when the layers that have 'TriggerLayerEvent' enabled go from 'Expanded' or 'Partially Expanded' to 'Collapsed'")]
+    /** Dispatched when the layer retracts, if TriggerLayerEvent is set to true. */
+    public UnityEvent LayerCollapse;
+    [Tooltip("Triggered when the layers that have 'TriggerLayerEvent' enabled go from 'Collapsed' to 'Partially Expanded' or 'Expanded'")]
+    /** Dispatched when the layer expands, if TriggerLayerEvent is set to true. */
+    public UnityEvent LayerExpand;
 
     //How quickly the button layers are Lerping
     private float curLerpSpeed = 0.1f;
@@ -50,16 +94,15 @@ namespace Leap.Unity.InputModule {
     //Reset the Positions of the UI Elements on both Start and Quit
     void Start() {
       for (int i = 0; i < Layers.Length; i++) {
-        if (Layers[i].LayerTransform != null) {
-          Vector3 LocalPosition = transform.InverseTransformPoint(Layers[i].LayerTransform.position);
-          Layers[i].LayerTransform.position = transform.TransformPoint(new Vector3(LocalPosition.x, LocalPosition.y, 0f));
+        if (Layers[i].LayerTransform != null && Layers[i].LayerTransform != transform) {
+          Layers[i].LayerTransform.localPosition = new Vector3(Layers[i].LayerTransform.localPosition.x, Layers[i].LayerTransform.localPosition.y, 0f);
 
           if (Layers[i].Shadow != null) {
             Layers[i].MaxShadowOpacity = Layers[i].Shadow.color.a;
             Layers[i].Shadow.color = new Color(Layers[i].Shadow.color.r, Layers[i].Shadow.color.g, Layers[i].Shadow.color.b, 0f);
           }
         } else {
-          Debug.LogWarning("Ensure that the layers that you have allotted have UI Elements in them!");
+          Debug.LogWarning("Ensure that the layers that you have allotted are children of CompressibleUI object and have UI Elements in them!");
         }
       }
       //if (!RetractWhenOutsideofTouchingDistance) {
@@ -70,8 +113,7 @@ namespace Leap.Unity.InputModule {
     void OnApplicationQuit() {
       for (int i = 0; i < Layers.Length; i++) {
         if (Layers[i].LayerTransform != null) {
-          Vector3 LocalPosition = transform.InverseTransformPoint(Layers[i].LayerTransform.position);
-          Layers[i].LayerTransform.position = transform.TransformPoint(new Vector3(LocalPosition.x, LocalPosition.y, 0f));
+          Layers[i].LayerTransform.localPosition = new Vector3(Layers[i].LayerTransform.localPosition.x, Layers[i].LayerTransform.localPosition.y, 0f);
         }
       }
     }
@@ -86,34 +128,26 @@ namespace Leap.Unity.InputModule {
         if (currentlyFloating) {
           if (Layers[i].LayerTransform != null) {
             if (HoveringDistance < Layers[i].MaxFloatDistance && HoveringDistance > Layers[i].MinFloatDistance) {
-              Layers[i].CurrentFloatingDistance = Mathf.Lerp(Layers[i].CurrentFloatingDistance, HoveringDistance, 0.2f); //Set to 1f for responsive touching...
+              Layers[i].CurrentFloatingDistance = Mathf.Lerp(Layers[i].CurrentFloatingDistance, HoveringDistance, 0.7f); //Set lower than 1f for delayed touching
               if (Layers[i].TriggerLayerEvent && !Layers[i].touchingFinger) {
                 Layers[i].touchingFinger = true;
-                Graphic image = Layers[i].LayerTransform.GetComponent<Graphic>();
-                if (image != null) {
-                  image.color = new Color(image.color.r - 0.175f, image.color.g - 0.175f, image.color.b - 0.175f, image.color.a);
-                }
-                LayerCollapseStateChange.Invoke();
+                LayerDepress.Invoke();
               }
             } else if (HoveringDistance < Layers[i].MinFloatDistance) {
-              Layers[i].CurrentFloatingDistance = Mathf.Lerp(Layers[i].CurrentFloatingDistance, Layers[i].MinFloatDistance, curLerpSpeed);
-              if (Layers[i].TriggerLayerEvent && !Layers[i].touchingFinger) {
-                Layers[i].touchingFinger = true;
-                Graphic image = Layers[i].LayerTransform.GetComponent<Graphic>();
-                if (image != null) {
-                  image.color = new Color(image.color.r - 0.175f, image.color.g - 0.175f, image.color.b - 0.175f, image.color.a);
+              if (Layers[i].TriggerLayerEvent) {
+                if (!Layers[i].touchingFinger) {
+                  Layers[i].touchingFinger = true;
                 }
-                LayerCollapseStateChange.Invoke();
+                if (Layers[i].CurrentFloatingDistance > Layers[i].MinFloatDistance) {
+                  LayerCollapse.Invoke();
+                }
               }
+              Layers[i].CurrentFloatingDistance = Layers[i].MinFloatDistance;
             } else {
               Layers[i].CurrentFloatingDistance = Mathf.Lerp(Layers[i].CurrentFloatingDistance, Layers[i].MaxFloatDistance, curLerpSpeed);
               if (Layers[i].TriggerLayerEvent && Layers[i].touchingFinger) {
                 Layers[i].touchingFinger = false;
-                Graphic image = Layers[i].LayerTransform.GetComponent<Graphic>();
-                if (image != null) {
-                  image.color = new Color(image.color.r + 0.175f, image.color.g + 0.175f, image.color.b + 0.175f, image.color.a);
-                }
-                LayerCollapseStateChange.Invoke();
+                LayerExpand.Invoke();
               }
             }
           }
@@ -123,10 +157,6 @@ namespace Leap.Unity.InputModule {
             Layers[i].CurrentFloatingDistance = Mathf.Lerp(Layers[i].CurrentFloatingDistance, 0f, curLerpSpeed);
             if (Layers[i].TriggerLayerEvent && Layers[i].touchingFinger) {
               Layers[i].touchingFinger = false;
-              Graphic image = Layers[i].LayerTransform.GetComponent<Graphic>();
-              if (image != null) {
-                image.color = new Color(image.color.r + 0.175f, image.color.g + 0.175f, image.color.b + 0.175f, image.color.a);
-              }
             }
           }
         }
@@ -147,22 +177,27 @@ namespace Leap.Unity.InputModule {
           }
         }
         if (Layers[i].LayerTransform != null) {
-          Vector3 LocalPosition = transform.InverseTransformPoint(Layers[i].LayerTransform.position);
-          Layers[i].LayerTransform.position = transform.TransformPoint(new Vector3(LocalPosition.x, LocalPosition.y, -Layers[i].CurrentFloatingDistance / transform.lossyScale.z));
+          Vector3 LocalPosition = Layers[i].LayerTransform.parent.InverseTransformPoint(transform.TransformPoint(new Vector3(0f, 0f, -Layers[i].CurrentFloatingDistance / transform.lossyScale.z)));
+          Layers[i].LayerTransform.localPosition = new Vector3(Layers[i].LayerTransform.localPosition.x, Layers[i].LayerTransform.localPosition.y, LocalPosition.z);
         }
       }
     }
 
+    /** Manually sets the current hover distance.  
+     *  @param distance the distance above the base of the button in millimeters.
+     */
     public void HoverDistance(float distance) {
       HoveringDistance = distance - PushPaddingDistance;
       TimeLastHovered = Time.time;
     }
 
+    /** Move the layer members to their, extended, floating positions. */
     public void Expand() {
       currentlyFloating = true;
       curLerpSpeed = ExpandSpeed;
     }
 
+    /** Restore the layer members to their non-floating positions. */
     public void Retract() {
       //if (RetractWhenOutsideofTouchingDistance) {
         currentlyFloating = false;
@@ -180,6 +215,14 @@ namespace Leap.Unity.InputModule {
         for (int i = 0; i < Layers.Length; i++) {
           Layers[i].MinFloatDistance *= 2f;
           Layers[i].MaxFloatDistance *= 2f;
+        }
+      }
+    }
+
+    void OnValidate() {
+      for (int i = 0; i < Layers.Length; i++) {
+        if (Layers[i].LayerTransform != null) {
+          Layers[i].Label = Layers[i].LayerTransform.gameObject.name + " Layer";
         }
       }
     }
