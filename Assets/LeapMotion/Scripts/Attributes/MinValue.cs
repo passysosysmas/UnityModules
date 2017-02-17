@@ -25,6 +25,13 @@ namespace Leap.Unity.Attributes {
         property.vector3Value = Vector3.Max(new Vector3(minValue, minValue, minValue), property.vector3Value);
       } else if (property.propertyType == SerializedPropertyType.Vector4) {
         property.vector4Value = Vector4.Max(new Vector4(minValue, minValue, minValue, minValue), property.vector4Value);
+      } else if (property.propertyType == SerializedPropertyType.Generic) {
+        if (property.type == "Int2") {
+          SerializedProperty x = property.FindPropertyRelative("x");
+          SerializedProperty y = property.FindPropertyRelative("y");
+          x.intValue = Mathf.Min(x.intValue, (int)minValue);
+          y.intValue = Mathf.Min(y.intValue, (int)minValue);
+        }
       }
     }
 
@@ -35,6 +42,7 @@ namespace Leap.Unity.Attributes {
         yield return SerializedPropertyType.Vector2;
         yield return SerializedPropertyType.Vector3;
         yield return SerializedPropertyType.Vector4;
+        yield return SerializedPropertyType.Generic;
       }
     }
 #endif
