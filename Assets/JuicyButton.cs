@@ -58,6 +58,8 @@ public class JuicyButton : MonoBehaviour {
           playSound(pressSound);
           SetColor(pressGradient, pressGradientTime);
         }
+
+        graphicAnchor.transform.localPosition = new Vector3(0, 0, Mathf.Min(pressDistance, pressThreshold));
         yield return null;
       }
 
