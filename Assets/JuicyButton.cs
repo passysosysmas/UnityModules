@@ -12,6 +12,9 @@ public class JuicyButton : MonoBehaviour {
   public float buttonRadius = 0.05f;
   public float hoverRadius = 0.06f;
 
+  [Header("Motion")]
+  public AnimationCurve overPressAction;
+
   [Header("Colors")]
   public Color baseColor;
   public Color hoverColor;
