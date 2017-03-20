@@ -1,11 +1,30 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
 
-public abstract class LeapGuiRenderer : LeapGuiComponentBase<LeapGui> {
+public abstract class LeapGuiRendererBase : LeapGuiComponentBase<LeapGui> {
 
   [HideInInspector]
   public LeapGui gui;
 
+  [HideInInspector]
+  public LeapGuiGroup group;
+
   public abstract SupportInfo GetSpaceSupportInfo(LeapGuiSpace space);
+
+  protected override void OnValidate() {
+    base.OnValidate();
+
+#if UNITY_EDITOR
+    if (!Application.isPlaying) {
+      if (gui != null) {
+        gui.ScheduleEditorUpdate();
+      }
+    }
+#endif
+  }
+
+  protected bool isHeavyUpdate { get; private set; }
 
   /// <summary>
   /// Called when the leap gui is enabled at runtime.
@@ -40,5 +59,30 @@ public abstract class LeapGuiRenderer : LeapGuiComponentBase<LeapGui> {
   /// called every time a change is performed to the gui, but it is
   /// not called all the time!
   /// </summary>
-  public abstract void OnUpdateRendererEditor();
+  public virtual void OnUpdateRendererEditor(bool isHeavyUpdate) {
+    this.isHeavyUpdate = isHeavyUpdate;
+  }
+
+  public abstract bool IsValidElement<T>();
+  public abstract bool IsValidElement(LeapGuiElement element);
+
+  public abstract LeapGuiElement GetValidElementOnObject(GameObject obj);
+}
+
+public abstract class LeapGuiRenderer<ElementType> : LeapGuiRendererBase where ElementType : LeapGuiElement {
+
+  public override bool IsValidElement<T>() {
+    Type t = typeof(T);
+    Type elementType = typeof(ElementType);
+
+    return t == elementType || (t.IsSubclassOf(elementType));
+  }
+
+  public override bool IsValidElement(LeapGuiElement element) {
+    return element is ElementType;
+  }
+
+  public override LeapGuiElement GetValidElementOnObject(GameObject obj) {
+    return obj.GetComponent<ElementType>();
+  }
 }

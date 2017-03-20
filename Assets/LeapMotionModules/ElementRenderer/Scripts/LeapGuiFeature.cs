@@ -8,23 +8,14 @@ public abstract class LeapGuiFeatureBase : LeapGuiComponentBase<LeapGui> {
 
   public bool isDirty {
     get {
-#if UNITY_EDITOR
-      if (Application.isPlaying) {
-        return _isDirty;
-      } else {
-        return true;
-      }
-#else
       return _isDirty;
-#endif
     }
     set {
       _isDirty = value;
     }
   }
 
-  //TODO: add logic in LeapGUI to use this method
-  public virtual SupportInfo GetSupportInfo(LeapGui gui) {
+  public virtual SupportInfo GetSupportInfo(LeapGuiGroup group) {
     return SupportInfo.FullSupport();
   }
 

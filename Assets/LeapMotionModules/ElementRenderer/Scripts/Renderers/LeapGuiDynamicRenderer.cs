@@ -5,8 +5,7 @@ using Leap.Unity;
 
 [AddComponentMenu("")]
 [LeapGuiTag("Dynamic")]
-public class LeapGuiDynamicRenderer : LeapGuiMesherBase,
-  ISupportsAddRemove {
+public class LeapGuiDynamicRenderer : LeapGuiMesherBase, ISupportsAddRemove {
 
   #region PRIVATE VARIABLES
 
@@ -17,14 +16,14 @@ public class LeapGuiDynamicRenderer : LeapGuiMesherBase,
   private List<Vector4> _curved_elementParameters = new List<Vector4>();
   #endregion
 
-  public void OnAddElements(List<LeapGuiElement> elements, List<int> indexes) {
+  public void OnAddElement() {
     //TODO, this is super slow and sad
-    OnUpdateRendererEditor();
+    OnUpdateRendererEditor(isHeavyUpdate: false);
   }
 
-  public void OnRemoveElements(List<int> toRemove) {
+  public void OnRemoveElement() {
     //TODO, this is super slow and sad
-    OnUpdateRendererEditor();
+    OnUpdateRendererEditor(isHeavyUpdate: false);
   }
 
   public override SupportInfo GetSpaceSupportInfo(LeapGuiSpace space) {
@@ -42,8 +41,8 @@ public class LeapGuiDynamicRenderer : LeapGuiMesherBase,
 
     if (gui.space is LeapGuiRectSpace) {
       using (new ProfilerSample("Draw Meshes")) {
-        for (int i = 0; i < gui.elements.Count; i++) {
-          Graphics.DrawMesh(_meshes[i], gui.elements[i].transform.localToWorldMatrix, _material, 0);
+        for (int i = 0; i < group.elements.Count; i++) {
+          Graphics.DrawMesh(_meshes[i], group.elements[i].transform.localToWorldMatrix, _material, 0);
         }
       }
     } else if (gui.space is LeapGuiRadialSpaceBase) {
@@ -54,7 +53,7 @@ public class LeapGuiDynamicRenderer : LeapGuiMesherBase,
         _curved_meshTransforms.Clear();
         _curved_elementParameters.Clear();
         for (int i = 0; i < _meshes.Count; i++) {
-          var element = gui.elements[i];
+          var element = group.elements[i];
           var transformer = curvedSpace.GetTransformer(element.anchor);
 
           Vector3 guiLocalPos = gui.transform.InverseTransformPoint(element.transform.position);
@@ -71,9 +70,9 @@ public class LeapGuiDynamicRenderer : LeapGuiMesherBase,
 
       using (new ProfilerSample("Upload Material Data")) {
         _material.SetFloat(LeapGuiRadialSpaceBase.RADIUS_PROPERTY, curvedSpace.radius);
-        _material.SetMatrixArray("_LeapGuiCurved_WorldToAnchor", _curved_worldToAnchor);
+        _material.SetMatrixArraySafe("_LeapGuiCurved_WorldToAnchor", _curved_worldToAnchor);
         _material.SetMatrix("_LeapGui_LocalToWorld", transform.localToWorldMatrix);
-        _material.SetVectorArray("_LeapGuiCurved_ElementParameters", _curved_elementParameters);
+        _material.SetVectorArraySafe("_LeapGuiCurved_ElementParameters", _curved_elementParameters);
       }
 
       using (new ProfilerSample("Draw Meshes")) {
@@ -114,8 +113,12 @@ public class LeapGuiDynamicRenderer : LeapGuiMesherBase,
     return vertex;
   }
 
-  protected override Vector3 elementNormalToMeshNormal(Vector3 normal) {
-    return normal;
+  protected override void elementVertNormalToMeshVertNormal(Vector3 vertex, 
+                                                            Vector3 normal, 
+                                                        out Vector3 meshVert,
+                                                        out Vector3 meshNormal) {
+    meshVert = vertex;
+    meshNormal = normal;
   }
 
   protected override Vector3 blendShapeDelta(Vector3 shapeVert, Vector3 originalVert) {

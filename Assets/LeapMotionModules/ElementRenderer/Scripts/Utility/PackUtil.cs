@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Leap.Unity;
 using Leap.Unity.Query;
 using Leap.Unity.Attributes;
 
@@ -9,16 +10,20 @@ public static class PackUtil {
 
   [Serializable]
   public class Settings {
+    [EditTimeOnly]
     [MinValue(0)]
     public int border = 1;
 
+    [EditTimeOnly]
     [MinValue(0)]
     public int padding = 0;
 
+    [EditTimeOnly]
     [MinValue(16)]
     [MaxValue(8192)]
     public int maxAtlasSize = 4096;
 
+    [EditTimeOnly]
     public FilterMode filterMode = FilterMode.Bilinear;
   }
 
@@ -71,10 +76,10 @@ public static class PackUtil {
     }
 
     //Clear cache
-    foreach (var texture in _cachedBorderedTextures.Values) {
+    foreach (var texture in _cachedProcessedTextures.Values) {
       UnityEngine.Object.DestroyImmediate(texture);
     }
-    _cachedBorderedTextures.Clear();
+    _cachedProcessedTextures.Clear();
   }
 
   private static void prepareForPacking(LeapGuiTextureFeature feature,
@@ -82,7 +87,7 @@ public static class PackUtil {
                                         Texture2D[] textureArray,
                                     out Texture2D defaultTexture,
                                     out Texture2D packedTexture) {
-    feature.data.Query().Select(dataObj => getBordered(dataObj.texture, settings.border)).FillArray(textureArray);
+    feature.data.Query().Select(dataObj => processTexture(dataObj.texture, settings.border)).FillArray(textureArray);
 
     var nonNullTexture = feature.data.Query().Select(d => d.texture).FirstOrDefault(t => t != null);
     TextureFormat format;
@@ -96,8 +101,6 @@ public static class PackUtil {
     for (int i = 0; i < textureArray.Length; i++) {
       if (textureArray[i] == null) {
         textureArray[i] = defaultTexture;
-      } else {
-        textureArray[i].EnsureReadWriteEnabled();
       }
     }
 
@@ -105,22 +108,25 @@ public static class PackUtil {
     packedTexture.filterMode = settings.filterMode;
   }
 
-  private static Dictionary<BorderKey, Texture2D> _cachedBorderedTextures = new Dictionary<BorderKey, Texture2D>();
-  private static Texture2D getBordered(Texture2D source, int border) {
-    if (border <= 0) {
-      return source;
-    }
-
+  private static Dictionary<ProcessKey, Texture2D> _cachedProcessedTextures = new Dictionary<ProcessKey, Texture2D>();
+  private static Texture2D processTexture(Texture2D source, int border) {
     if (source == null) {
       return null;
     }
 
     Texture2D bordered;
-    BorderKey key = new BorderKey() { texture = source, border = border };
-    if (!_cachedBorderedTextures.TryGetValue(key, out bordered)) {
-      source.EnsureReadWriteEnabled();
-      bordered = source.GetBordered(border);
-      _cachedBorderedTextures[key] = bordered;
+    ProcessKey key = new ProcessKey() { texture = source, border = border };
+    if (!_cachedProcessedTextures.TryGetValue(key, out bordered)) {
+
+      if (source.IsReadable()) {
+        bordered = source.GetBordered(border);
+      } else {
+        var tempReadable = source.GetReadableTexture();
+        bordered = tempReadable.GetBordered(border);
+        UnityEngine.Object.DestroyImmediate(tempReadable);
+      }
+
+      _cachedProcessedTextures[key] = bordered;
     }
     return bordered;
   }
@@ -136,7 +142,7 @@ public static class PackUtil {
     return texture;
   }
 
-  private struct BorderKey {
+  private struct ProcessKey {
     public Texture2D texture;
     public int border;
   }
