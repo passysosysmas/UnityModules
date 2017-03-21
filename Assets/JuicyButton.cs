@@ -2,6 +2,7 @@
 using UnityEngine;
 using Leap;
 using Leap.Unity;
+using Leap.Unity.Attributes;
 
 public class JuicyButton : MonoBehaviour {
 
@@ -10,14 +11,10 @@ public class JuicyButton : MonoBehaviour {
   public float pressThreshold = 0.02f;
   public float clickThreshold = -0.01f;
   public float buttonRadius = 0.05f;
-  public float hoverRadius = 0.06f;
-
-  [Header("Motion")]
-  public AnimationCurve overPressAction;
+  public float hoverRadius = 0.14f;
 
   [Header("Colors")]
-  public Color baseColor;
-  public Color hoverColor;
+  public Gradient hoverGradient;
   public float touchGradientTime = 0.01f;
   public Gradient touchGradient;
   public float pressGradientTime = 0.01f;
@@ -37,12 +34,12 @@ public class JuicyButton : MonoBehaviour {
     while (true) {
       //Wait until being touched
       while (pressDistance < 0) {
-        SetColor(Color.Lerp(baseColor, hoverColor, hoverPercent));
+        SetColor(hoverGradient.Evaluate(hoverPercent));
         yield return null;
       }
 
-      //If not hovering, wait until completely unpressed
-      if (hoverPercent == 0.0f) {
+      //If not 100% hovering, wait until completely unpressed
+      if (hoverPercent < 1.0f) {
         while (pressDistance > 0) {
           yield return null;
         }
@@ -65,6 +62,9 @@ public class JuicyButton : MonoBehaviour {
         graphicAnchor.transform.localPosition = new Vector3(0, 0, Mathf.Min(pressDistance, pressThreshold));
         yield return null;
       }
+
+      //reset anchor to origin
+      graphicAnchor.transform.localPosition = Vector3.zero;
 
       if (didPress) {
         playSound(clickSound);
@@ -109,6 +109,9 @@ public class JuicyButton : MonoBehaviour {
 
       foreach (var hand in provider.CurrentFrame.Hands) {
         foreach (var finger in hand.Fingers) {
+          if (!finger.IsExtended) continue;
+          if (finger.Type == Finger.FingerType.TYPE_THUMB) continue;
+
           Vector3 tip = finger.Bone(Bone.BoneType.TYPE_DISTAL).NextJoint.ToVector3();
           Vector3 localTip = transform.InverseTransformPoint(tip);
 
