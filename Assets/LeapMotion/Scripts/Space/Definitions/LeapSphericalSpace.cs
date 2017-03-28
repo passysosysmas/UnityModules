@@ -4,7 +4,6 @@ using UnityEngine;
 namespace Leap.Unity.Space {
 
   public class LeapSphericalSpace : LeapRadialSpace {
-    public const string FEATURE_NAME = LeapGui.FEATURE_PREFIX + "SPHERICAL";
 
     protected override ITransformer CosntructBaseTransformer() {
       return new Transformer() {

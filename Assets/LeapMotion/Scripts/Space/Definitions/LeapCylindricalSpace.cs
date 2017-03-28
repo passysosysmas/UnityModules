@@ -3,7 +3,6 @@
 namespace Leap.Unity.Space {
 
   public class LeapCylindricalSpace : LeapRadialSpace {
-    public const string FEATURE_NAME = LeapGui.FEATURE_PREFIX + "CYLINDRICAL";
 
     protected override ITransformer CosntructBaseTransformer() {
       return new Transformer() {
