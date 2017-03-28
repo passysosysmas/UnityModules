@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using Leap.Unity.Attributes;
-using System;
 
 namespace Leap.Unity.Space {
 
@@ -9,8 +8,6 @@ namespace Leap.Unity.Space {
   }
 
   public abstract class LeapRadialSpace : LeapSpace {
-    public const string RADIUS_PROPERTY = LeapGui.PROPERTY_PREFIX + "RadialSpace_Radius";
-
 
     [MinValue(0.001f)]
     [EditTimeOnly, SerializeField]
