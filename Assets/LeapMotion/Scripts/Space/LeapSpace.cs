@@ -1,24 +1,38 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
+using Leap.Unity.Query;
 
 namespace Leap.Unity.Space {
 
   public abstract class LeapSpace : LeapSpaceAnchor {
-
-    protected virtual void OnValidate() {
+    private static List<LeapSpace> _enabledSpaces = new List<LeapSpace>();
+    public static List<LeapSpace> allEnabled {
+      get {
 #if UNITY_EDITOR
-      /*
-      if (!Application.isPlaying) {
-        if (gui != null) {
-          gui.editor.ScheduleEditorUpdate();
+        //if we are in the editor, don't bother with enable/disable lifecycle
+        //just use FindObjectsOfType!
+        if (!Application.isPlaying) {
+          FindObjectsOfType<LeapSpace>().Query().Where(c => c.enabled).FillList(_enabledSpaces);
         }
-      }
-      */
 #endif
+        return _enabledSpaces;
+      }
     }
 
     private List<LeapSpaceAnchor> _anchors = new List<LeapSpaceAnchor>();
+
+    protected override void OnEnable() {
+      base.OnEnable();
+
+      _enabledSpaces.Add(this);
+    }
+
+    protected override void OnDisable() {
+      base.OnDisable();
+
+      _enabledSpaces.Remove(this);
+    }
 
     /// <summary>
     /// Returns all active anchors in depth-first pre-order

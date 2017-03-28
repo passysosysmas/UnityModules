@@ -11,9 +11,9 @@ namespace Leap.Unity.Space {
 
     public ITransformer transformer;
 
-    //Just have an empty start method to allow the component to be
-    //enabled and disabled
-    protected virtual void Start() { }
+    protected virtual void OnEnable() { }
+
+    protected virtual void OnDisable() { }
 
     public void RecalculateParentAnchor() {
       if (this is LeapSpace) {
