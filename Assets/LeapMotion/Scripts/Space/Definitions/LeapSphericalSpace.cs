@@ -23,13 +23,13 @@ namespace Leap.Unity.Space {
       };
     }
 
-    protected override void UpdateRadialTransformer(ITransformer transformer, ITransformer parent, Vector3 guiSpaceDelta) {
+    protected override void UpdateRadialTransformer(ITransformer transformer, ITransformer parent, Vector3 rectSpaceDelta) {
       var radialTransformer = transformer as Transformer;
       var radialParent = parent as Transformer;
 
-      radialTransformer.angleXOffset = radialParent.angleXOffset + guiSpaceDelta.x / radialParent.radiusOffset;
-      radialTransformer.angleYOffset = radialParent.angleYOffset + guiSpaceDelta.y / radialParent.radiusOffset;
-      radialTransformer.radiusOffset = radialParent.radiusOffset + guiSpaceDelta.z;
+      radialTransformer.angleXOffset = radialParent.angleXOffset + rectSpaceDelta.x / radialParent.radiusOffset;
+      radialTransformer.angleYOffset = radialParent.angleYOffset + rectSpaceDelta.y / radialParent.radiusOffset;
+      radialTransformer.radiusOffset = radialParent.radiusOffset + rectSpaceDelta.z;
       radialTransformer.radiansPerMeter = 1.0f / (radialTransformer.radiusOffset);
     }
 
@@ -45,8 +45,8 @@ namespace Leap.Unity.Space {
       public Vector3 TransformPoint(Vector3 localRectPos) {
         Vector3 anchorDelta;
 
-        Vector3 anchorGuiPos = space.transform.InverseTransformPoint(anchor.transform.position);
-        anchorDelta = localRectPos - anchorGuiPos;
+        Vector3 anchorRectPos = space.transform.InverseTransformPoint(anchor.transform.position);
+        anchorDelta = localRectPos - anchorRectPos;
 
         float angleX = angleXOffset + anchorDelta.x / radiusOffset;
         float angleY = angleYOffset + anchorDelta.y / radiusOffset;
@@ -65,15 +65,15 @@ namespace Leap.Unity.Space {
         return position2;
       }
 
-      public Vector3 InverseTransformPoint(Vector3 localGuiPos) {
+      public Vector3 InverseTransformPoint(Vector3 localWarpedPos) {
         throw new NotImplementedException();
       }
 
       public Quaternion TransformRotation(Vector3 localRectPos, Quaternion localRectRot) {
         Vector3 anchorDelta;
 
-        Vector3 anchorGuiPos = space.transform.InverseTransformPoint(anchor.transform.position);
-        anchorDelta = localRectPos - anchorGuiPos;
+        Vector3 anchorRectPos = space.transform.InverseTransformPoint(anchor.transform.position);
+        anchorDelta = localRectPos - anchorRectPos;
 
         float angleX = angleXOffset + anchorDelta.x / radiusOffset;
         float angleY = angleYOffset + anchorDelta.y / radiusOffset;
@@ -85,7 +85,7 @@ namespace Leap.Unity.Space {
         return rotation * localRectRot;
       }
 
-      public Quaternion InverseTransformRotation(Vector3 localGuiPos, Quaternion localGuiRot) {
+      public Quaternion InverseTransformRotation(Vector3 localWarpedPos, Quaternion localWarpedRot) {
         throw new NotImplementedException();
       }
 
@@ -93,15 +93,15 @@ namespace Leap.Unity.Space {
         throw new NotImplementedException();
       }
 
-      public Vector3 InverseTransformDirection(Vector3 localGuiPos, Vector3 localGuiDirection) {
+      public Vector3 InverseTransformDirection(Vector3 localWarpedPos, Vector3 localWarpedDirection) {
         throw new NotImplementedException();
       }
 
       public Matrix4x4 GetTransformationMatrix(Vector3 localRectPos) {
         Vector3 anchorDelta;
 
-        Vector3 anchorGuiPos = space.transform.InverseTransformPoint(anchor.transform.position);
-        anchorDelta = localRectPos - anchorGuiPos;
+        Vector3 anchorRectPos = space.transform.InverseTransformPoint(anchor.transform.position);
+        anchorDelta = localRectPos - anchorRectPos;
 
         float angleX = angleXOffset + anchorDelta.x / radiusOffset;
         float angleY = angleYOffset + anchorDelta.y / radiusOffset;
@@ -129,9 +129,9 @@ namespace Leap.Unity.Space {
         Debug.Log(space);
         Debug.Log(element);
 
-        Vector3 elementGuiPos = space.transform.InverseTransformPoint(element.position);
-        Vector3 anchorGuiPos = space.transform.InverseTransformPoint(anchor.transform.position);
-        Vector3 delta = elementGuiPos - anchorGuiPos;
+        Vector3 elementRectPos = space.transform.InverseTransformPoint(element.position);
+        Vector3 anchorRectPos = space.transform.InverseTransformPoint(anchor.transform.position);
+        Vector3 delta = elementRectPos - anchorRectPos;
 
         Vector4 rep;
         rep.x = angleXOffset + delta.x / radiusOffset;

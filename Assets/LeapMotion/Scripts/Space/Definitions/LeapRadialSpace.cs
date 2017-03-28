@@ -29,12 +29,13 @@ namespace Leap.Unity.Space {
     }
 
     protected sealed override void UpdateTransformer(ITransformer transformer, ITransformer parent) {
-      Vector3 anchorGuiPosition = transform.InverseTransformPoint(transformer.anchor.transform.position);
-      Vector3 parentGuiPosition = transform.InverseTransformPoint(parent.anchor.transform.position);
-      Vector3 delta = anchorGuiPosition - parentGuiPosition;
+      Vector3 anchorRectPos = transform.InverseTransformPoint(transformer.anchor.transform.position);
+      Vector3 parentRectPos = transform.InverseTransformPoint(parent.anchor.transform.position);
+      Vector3 delta = anchorRectPos - parentRectPos;
       UpdateRadialTransformer(transformer, parent, delta);
     }
 
-    protected abstract void UpdateRadialTransformer(ITransformer transformer, ITransformer parent, Vector3 guiSpaceDelta);
+    protected abstract void UpdateRadialTransformer(ITransformer transformer, ITransformer parent, Vector3 rectSpaceDelta
+      );
   }
 }
