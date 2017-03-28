@@ -58,12 +58,12 @@ namespace Leap.Unity {
     /// </summary>
     public static Hash GetDataHash(Transform transform) {
       var hash = new Hash() {
-      transform,
-      transform.gameObject.activeSelf,
-      transform.localPosition,
-      transform.localRotation,
-      transform.localScale
-    };
+        transform,
+        transform.gameObject.activeSelf,
+        transform.localPosition,
+        transform.localRotation,
+        transform.localScale
+      };
 
       if (transform is RectTransform) {
         RectTransform rectTransform = transform as RectTransform;
