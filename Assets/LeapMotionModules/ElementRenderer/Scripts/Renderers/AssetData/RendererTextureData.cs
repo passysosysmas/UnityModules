@@ -1,4 +1,4 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -6,9 +6,21 @@ using UnityEditor;
 #endif
 using Leap.Unity.Query;
 
-public class RendererTextureData : ScriptableObject {
+public class RendererTextureData : SceneTiedAsset {
   [SerializeField]
   private List<NamedTexture> packedTextures = new List<NamedTexture>();
+
+#if UNITY_EDITOR
+  protected override void OnAssetSaved() {
+    base.OnAssetSaved();
+
+    foreach (var pair in packedTextures) {
+      if (!AssetDatabase.IsSubAsset(pair.texture)) {
+        AssetDatabase.AddObjectToAsset(pair.texture, this);
+      }
+    }
+  }
+#endif
 
   private void OnDestroy() {
     foreach (var tex in packedTextures) {
@@ -40,13 +52,16 @@ public class RendererTextureData : ScriptableObject {
     }
 
     foreach (var pair in newList) {
-      if (!packedTextures.Contains(pair)) {
+      if (!packedTextures.Contains(pair) && isSavedAsset) {
         AssetDatabase.AddObjectToAsset(pair.texture, this);
       }
     }
 
     packedTextures = newList;
-    AssetDatabase.SaveAssets();
+
+    if (isSavedAsset) {
+      AssetDatabase.SaveAssets();
+    }
   }
 #endif
 
@@ -61,6 +76,7 @@ public class RendererTextureData : ScriptableObject {
     }
   }
 
+  [Serializable]
   public struct NamedTexture {
     public string propertyName;
     public Texture2D texture;

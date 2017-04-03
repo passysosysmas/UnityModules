@@ -3,13 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 using Leap.Unity;
+using Leap.Unity.Space;
 using Leap.Unity.Query;
 
-public class LeapGuiGroup : LeapGuiComponentBase<LeapGui> {
+[AddComponentMenu("")]
+public partial class LeapGuiGroup : LeapGuiComponentBase<LeapGui> {
 
   #region INSPECTOR FIELDS
   [SerializeField]
@@ -87,13 +86,18 @@ public class LeapGuiGroup : LeapGuiComponentBase<LeapGui> {
     }
 
     if (_elements.Contains(element)) {
-      return false;
+      if (element.attachedGroup == null) {
+        //detatch and re-add, it forgot it was attached!
+        //This can easily happen at edit time due to prefab shenanigans 
+        element.OnDetachedFromGui();
+      } else {
+        return false;
+      }
     }
 
     _elements.Add(element);
 
-    Transform anchor = AnchorOfConstantSize.GetParentAnchorOrGui(element.transform);
-    Assert.IsNotNull(anchor);
+    LeapSpaceAnchor anchor = _gui.space == null ? null : LeapSpaceAnchor.GetAnchor(element.transform);
 
     element.OnAttachedToGui(this, anchor);
 
@@ -103,7 +107,7 @@ public class LeapGuiGroup : LeapGuiComponentBase<LeapGui> {
 
 #if UNITY_EDITOR
     if (!Application.isPlaying) {
-      _gui.ScheduleEditorUpdate();
+      _gui.editor.ScheduleEditorUpdate();
     }
 
     if (_renderer is ISupportsAddRemove) {
@@ -136,7 +140,7 @@ public class LeapGuiGroup : LeapGuiComponentBase<LeapGui> {
 
 #if UNITY_EDITOR
     if (!Application.isPlaying) {
-      _gui.ScheduleEditorUpdate();
+      _gui.editor.ScheduleEditorUpdate();
     }
 
     if (_renderer is ISupportsAddRemove) {
@@ -167,66 +171,6 @@ public class LeapGuiGroup : LeapGuiComponentBase<LeapGui> {
 
     foreach (var feature in _features) {
       feature.isDirty = false;
-    }
-  }
-
-  #endregion
-
-  #region PUBLIC EDITOR API
-#if UNITY_EDITOR
-  public void Init(LeapGui gui, Type rendererType) {
-    AssertHelper.AssertEditorOnly();
-    Assert.IsNotNull(gui);
-    Assert.IsNotNull(rendererType);
-    _gui = gui;
-
-    ChangeRenderer(rendererType);
-  }
-
-  public void ChangeRenderer(Type rendererType) {
-    AssertHelper.AssertEditorOnly();
-    Assert.IsNotNull(rendererType);
-
-    if (_renderer != null) {
-      _renderer.OnDisableRendererEditor();
-      InternalUtility.Destroy(_renderer);
-      _renderer = null;
-    }
-
-    _renderer = gameObject.AddComponent(rendererType) as LeapGuiRendererBase;
-    Assert.IsNotNull(_renderer);
-    _renderer.gui = _gui;
-    _renderer.group = this;
-    _renderer.OnEnableRendererEditor();
-  }
-
-  public LeapGuiFeatureBase AddFeature(Type featureType) {
-    AssertHelper.AssertEditorOnly();
-    _gui.ScheduleEditorUpdate();
-
-    var feature = gameObject.AddComponent(featureType) as LeapGuiFeatureBase;
-    _features.Add(feature);
-
-    EditorUtility.SetDirty(this);
-    _gui.ScheduleEditorUpdate();
-
-    return feature;
-  }
-
-  public void RemoveFeature(LeapGuiFeatureBase feature) {
-    AssertHelper.AssertEditorOnly();
-    Assert.IsTrue(_features.Contains(feature));
-
-    _features.Remove(feature);
-    InternalUtility.Destroy(feature);
-    _gui.ScheduleEditorUpdate();
-  }
-
-  public void ValidateElementList() {
-    for (int i = _elements.Count; i-- != 0;) {
-      if (_elements[i] == null) {
-        _elements.RemoveAt(i);
-      }
     }
   }
 
@@ -323,25 +267,6 @@ public class LeapGuiGroup : LeapGuiComponentBase<LeapGui> {
       }
     }
   }
-
-  public void UpdateRendererEditor(bool heavyRebuild) {
-    AssertHelper.AssertEditorOnly();
-
-    _renderer.OnUpdateRendererEditor(heavyRebuild);
-  }
-
-  public void RebuildEditorPickingMeshes() {
-    if (gui.space == null) {
-      return;
-    }
-
-    using (new ProfilerSample("Rebuild Picking Meshes")) {
-      foreach (var element in _elements) {
-        element.RebuildEditorPickingMesh();
-      }
-    }
-  }
-#endif
   #endregion
 
   #region UNITY CALLBACKS
@@ -377,16 +302,7 @@ public class LeapGuiGroup : LeapGuiComponentBase<LeapGui> {
 
 #if UNITY_EDITOR
   protected override void OnDestroyedByUser() {
-    base.OnDestroyedByUser();
-
-    if (_renderer != null) {
-      _renderer.OnDisableRendererEditor();
-      InternalUtility.Destroy(_renderer);
-    }
-
-    foreach (var feature in _features) {
-      InternalUtility.Destroy(feature);
-    }
+    editor.OnDestroyedByUser();
   }
 #endif
 
@@ -414,12 +330,19 @@ public class LeapGuiGroup : LeapGuiComponentBase<LeapGui> {
 
   #region PRIVATE IMPLEMENTATION
 
+#if UNITY_EDITOR
+  private LeapGuiGroup() {
+    editor = new EditorApi(this);
+  }
+#endif
+
   private bool addRemoveSupportedOrEditTime() {
 #if UNITY_EDITOR
     if (!Application.isPlaying) {
       return true;
     }
 #endif
+
     return _addRemoveSupported;
   }
   #endregion

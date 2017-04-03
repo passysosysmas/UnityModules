@@ -1,13 +1,25 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
-public class RendererMeshData : ScriptableObject {
+public class RendererMeshData : SceneTiedAsset {
   [SerializeField]
   private List<Mesh> meshes = new List<Mesh>();
+
+#if UNITY_EDITOR
+  protected override void OnAssetSaved() {
+    base.OnAssetSaved();
+
+    //Make sure all our meshes are saved too!
+    foreach (var mesh in meshes) {
+      if (!AssetDatabase.IsSubAsset(mesh)) {
+        AssetDatabase.AddObjectToAsset(mesh, this);
+      }
+    }
+  }
+#endif
 
   private void OnDestroy() {
     foreach (var mesh in meshes) {
@@ -15,7 +27,6 @@ public class RendererMeshData : ScriptableObject {
     }
   }
 
-#if UNITY_EDITOR
   public void Clear() {
     foreach (var mesh in meshes) {
       DestroyImmediate(mesh, allowDestroyingAssets: true);
@@ -25,9 +36,12 @@ public class RendererMeshData : ScriptableObject {
 
   public void AddMesh(Mesh mesh) {
     meshes.Add(mesh);
-    AssetDatabase.AddObjectToAsset(mesh, this);
-  }
+#if UNITY_EDITOR
+    if (isSavedAsset) {
+      AssetDatabase.AddObjectToAsset(mesh, this);
+    }
 #endif
+  }
 
   public int Count {
     get {

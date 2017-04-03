@@ -1,13 +1,12 @@
 ﻿using System;
-using System.IO;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
-using Leap.Unity.Attributes;
+using Leap.Unity.Space;
 
 public abstract class LeapGuiRendererBase : LeapGuiComponentBase<LeapGui> {
+  public const string DATA_FOLDER_NAME = "_ElementData";
 
   [HideInInspector]
   public LeapGui gui;
@@ -15,7 +14,7 @@ public abstract class LeapGuiRendererBase : LeapGuiComponentBase<LeapGui> {
   [HideInInspector]
   public LeapGuiGroup group;
 
-  public abstract SupportInfo GetSpaceSupportInfo(LeapGuiSpace space);
+  public abstract SupportInfo GetSpaceSupportInfo(LeapSpace space);
 
   protected override void OnValidate() {
     base.OnValidate();
@@ -23,7 +22,7 @@ public abstract class LeapGuiRendererBase : LeapGuiComponentBase<LeapGui> {
 #if UNITY_EDITOR
     if (!Application.isPlaying) {
       if (gui != null) {
-        gui.ScheduleEditorUpdate();
+        gui.editor.ScheduleEditorUpdate();
       }
     }
 #endif
@@ -47,6 +46,7 @@ public abstract class LeapGuiRendererBase : LeapGuiComponentBase<LeapGui> {
   /// </summary>
   public abstract void OnUpdateRenderer();
 
+#if UNITY_EDITOR
   /// <summary>
   /// Called curing edit time when this renderer becomes a renderer for a 
   /// leap gui.  Use this for any edit-time construction you need.
@@ -67,11 +67,25 @@ public abstract class LeapGuiRendererBase : LeapGuiComponentBase<LeapGui> {
   public virtual void OnUpdateRendererEditor(bool isHeavyUpdate) {
     this.isHeavyUpdate = isHeavyUpdate;
   }
+#endif
 
   public abstract bool IsValidElement<T>();
   public abstract bool IsValidElement(LeapGuiElement element);
 
   public abstract LeapGuiElement GetValidElementOnObject(GameObject obj);
+
+  protected void CreateOrSave<T>(ref T t, string assetName) where T : SceneTiedAsset {
+    T newT = t;
+    if (SceneTiedAsset.CreateOrSave(ref newT,
+                                    gameObject.scene,
+                                    DATA_FOLDER_NAME,
+                                    assetName,
+                                    _persistentId)) {
+      Undo.RecordObject(this, "Updated element data");
+      t = newT;
+      EditorUtility.SetDirty(this);
+    }
+  }
 }
 
 public abstract class LeapGuiRenderer<ElementType> : LeapGuiRendererBase
@@ -91,51 +105,5 @@ public abstract class LeapGuiRenderer<ElementType> : LeapGuiRendererBase
 
   public override LeapGuiElement GetValidElementOnObject(GameObject obj) {
     return obj.GetComponent<ElementType>();
-  }
-
-  protected bool EnsureAssetSaved<T>(ref T asset, string name) where T : ScriptableObject {
-    if (asset != null) {
-      return true;
-    }
-
-    var scene = gameObject.scene;
-    if (!scene.IsValid()) {
-      return false;
-    }
-
-    var path = scene.path;
-    if (string.IsNullOrEmpty(path)) {
-      return false;
-    }
-
-    string directory = Path.GetDirectoryName(path);
-    string folderName = Path.GetFileNameWithoutExtension(path) + "_ElementData";
-    string fullDir = Path.Combine(directory, folderName);
-    string fullPath = Path.Combine(fullDir, name);
-
-    Directory.CreateDirectory(fullDir);
-
-    int index = 1;
-    string finalPath;
-    do {
-      finalPath = fullPath + " " + index + ".asset";
-      index++;
-    } while (File.Exists(finalPath));
-    
-    Undo.RecordObject(this, "Created renderer asset");
-    asset = ScriptableObject.CreateInstance<T>();
-    AssetDatabase.CreateAsset(asset, finalPath);
-    AssetDatabase.SaveAssets();
-    EditorUtility.SetDirty(this);
-
-    return true;
-  }
-
-  protected void DeleteAsset<T>(ref T asset) where T : ScriptableObject {
-    string path = AssetDatabase.GetAssetPath(asset);
-
-    DestroyImmediate(asset, allowDestroyingAssets: true);
-
-    AssetDatabase.DeleteAsset(path);
   }
 }

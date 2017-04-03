@@ -166,12 +166,12 @@ namespace Leap.Unity {
       HandRepresentation handRep = new HandRepresentation(this, hand, handChirality, modelType);
       for (int i = 0; i < ModelPool.Count; i++) {
         ModelGroup group = ModelPool[i];
-        handRep.Group = group;
         if (group.IsEnabled) {
           IHandModel model = group.TryGetModel(handChirality, modelType);
           if (model != null ) {
             handRep.AddModel(model);
             if (!modelToHandRepMapping.ContainsKey(model)) {
+              model.group = group;
               modelToHandRepMapping.Add(model, handRep);
             }
           }
@@ -270,6 +270,16 @@ namespace Leap.Unity {
           ModelPool.Remove(modelGroup);
         }
       }
+    }
+    public T GetHandModel<T>(int handId) where T : IHandModel {
+      foreach (ModelGroup group in ModelPool) {
+        foreach (IHandModel handModel in group.modelsCheckedOut) {
+          if (handModel.GetLeapHand().Id == handId && handModel is T) {
+            return handModel as T;
+          }
+        }
+      }
+      return null;
     }
 
 #if UNITY_EDITOR
