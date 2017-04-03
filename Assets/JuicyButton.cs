@@ -13,6 +13,8 @@ public class JuicyButton : MonoBehaviour {
   public float buttonRadius = 0.05f;
   public float hoverRadius = 0.14f;
 
+  public AnimationCurve pressCurve;
+
   [Header("Colors")]
   public Gradient hoverGradient;
   public float touchGradientTime = 0.01f;
@@ -59,7 +61,8 @@ public class JuicyButton : MonoBehaviour {
           SetColor(pressGradient, pressGradientTime);
         }
 
-        graphicAnchor.transform.localPosition = new Vector3(0, 0, Mathf.Min(pressDistance, pressThreshold));
+        float pressPercent = pressDistance / pressThreshold;
+        graphicAnchor.transform.localPosition = new Vector3(0, 0, pressThreshold * pressCurve.Evaluate(pressPercent));
         yield return null;
       }
 
