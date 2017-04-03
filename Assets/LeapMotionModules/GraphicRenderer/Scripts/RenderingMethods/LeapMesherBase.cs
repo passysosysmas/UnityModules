@@ -94,11 +94,11 @@ namespace Leap.Unity.GraphicalRenderer {
     protected List<int> _tris = new List<int>();
     protected List<Color> _colors = new List<Color>();
     protected List<Vector4>[] _uvs = new List<Vector4>[4] {
-    new List<Vector4>(),
-    new List<Vector4>(),
-    new List<Vector4>(),
-    new List<Vector4>()
-  };
+      new List<Vector4>(),
+      new List<Vector4>(),
+      new List<Vector4>(),
+      new List<Vector4>()
+    };
 
     //Internal cache of requirements 
     protected bool _doesRequireColors;
@@ -597,20 +597,28 @@ namespace Leap.Unity.GraphicalRenderer {
 
     protected virtual void buildBlendShapes(LeapBlendShapeData blendShapeData) {
       using (new ProfilerSample("Build Blend Shapes")) {
-        var shape = blendShapeData.blendShape;
+        var shapeVerts = Pool<List<Vector3>>.Spawn();
 
-        int offset = _verts.Count - shape.vertexCount;
+        try {
+          if (!blendShapeData.TryGetBlendShape(shapeVerts)) {
+            return;
+          }
 
-        var verts = shape.vertices;
-        for (int i = 0; i < verts.Length; i++) {
-          Vector3 shapeVert = verts[i];
-          Vector3 delta = blendShapeDelta(shapeVert, _verts[i + offset]);
+          int offset = _verts.Count - shapeVerts.Count;
 
-          Vector4 currUv = _uvs[3][i + offset];
-          currUv.x = delta.x;
-          currUv.y = delta.y;
-          currUv.z = delta.z;
-          _uvs[3][i + offset] = currUv;
+          for (int i = 0; i < shapeVerts.Count; i++) {
+            Vector3 shapeVert = shapeVerts[i];
+            Vector3 delta = blendShapeDelta(shapeVert, _verts[i + offset]);
+
+            Vector4 currUv = _uvs[3][i + offset];
+            currUv.x = delta.x;
+            currUv.y = delta.y;
+            currUv.z = delta.z;
+            _uvs[3][i + offset] = currUv;
+          }
+        } finally {
+          shapeVerts.Clear();
+          Pool<List<Vector3>>.Recycle(shapeVerts);
         }
       }
     }

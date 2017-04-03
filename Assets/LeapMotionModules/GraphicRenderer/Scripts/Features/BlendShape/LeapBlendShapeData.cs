@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Leap.Unity.Query;
 using Leap.Unity.Attributes;
@@ -36,8 +37,13 @@ namespace Leap.Unity.GraphicalRenderer {
     [SerializeField]
     private Vector3 _rotation = new Vector3(0, 0, 5);
 
-    [SerializeField, HideInInspector]
-    private Mesh _mesh;
+    [EditTimeOnly]
+    [SerializeField]
+    private Transform _transform;
+
+    [EditTimeOnly]
+    [SerializeField]
+    private int _blendShapeIndex = 0;
 
     public float amount {
       get {
@@ -49,59 +55,79 @@ namespace Leap.Unity.GraphicalRenderer {
       }
     }
 
-    private Mesh _cachedBlendShape;
-    public Mesh blendShape {
-      get {
-        if (!(graphic is LeapMeshGraphicBase)) {
-          return null;
+    protected override void OnValidate() {
+      base.OnValidate();
+
+      if (_type == BlendShapeType.Mesh) {
+        Mesh source;
+        if (TryGetSourceMesh(out source) && source.blendShapeCount > 0) {
+          _blendShapeIndex = Mathf.Clamp(_blendShapeIndex, 0, source.blendShapeCount - 1);
+        }
+      }
+    }
+
+    public bool TryGetSourceMesh(out Mesh mesh) {
+      if (!(graphic is LeapMeshGraphicBase)) {
+        mesh = null;
+        return false;
+      }
+
+      var meshGraphic = graphic as LeapMeshGraphicBase;
+      meshGraphic.RefreshMeshData();
+
+      mesh = meshGraphic.mesh;
+      return mesh != null;
+    }
+
+    private Vector3[] cachedVertexArray = new Vector3[0];
+    private Vector3[] cachedNormalArray = new Vector3[0];
+    private Vector3[] cachedTrangentArray = new Vector3[0];
+    public bool TryGetBlendShape(List<Vector3> offsetVerts) {
+      Mesh source;
+      if (!TryGetSourceMesh(out source)) {
+        return false;
+      }
+
+      if (_type == BlendShapeType.Mesh) {
+        if (source.blendShapeCount <= 0) {
+          return false;
         }
 
-        var meshGraphic = graphic as LeapMeshGraphicBase;
-        meshGraphic.RefreshMeshData();
-
-        var mesh = meshGraphic.mesh;
-        if (mesh == null) {
-          return null;
+        if (cachedVertexArray.Length != source.vertexCount) {
+          cachedVertexArray = new Vector3[source.vertexCount];
+          cachedNormalArray = new Vector3[source.vertexCount];
+          cachedTrangentArray = new Vector3[source.vertexCount];
         }
 
-        if (_type == BlendShapeType.Mesh) {
-          //If the vert count is different, we are in trouble
-          if (_mesh == null || _mesh.vertexCount != mesh.vertexCount) {
-            return null;
-          }
+        source.GetBlendShapeFrameVertices(_blendShapeIndex, 0, cachedVertexArray, cachedNormalArray, cachedTrangentArray);
 
-          return _mesh;
-        } else {
-          Matrix4x4 transformation;
+        cachedVertexArray.Query().Zip(source.vertices.Query(), (a, b) => a + b).FillList(offsetVerts);
+        return true;
+      } else {
+        Matrix4x4 transformation;
 
-          switch (_type) {
-            case BlendShapeType.Translation:
-              transformation = Matrix4x4.TRS(_translation, Quaternion.identity, Vector3.one);
-              break;
-            case BlendShapeType.Rotation:
-              transformation = Matrix4x4.TRS(Vector3.zero, Quaternion.Euler(_rotation), Vector3.one);
-              break;
-            case BlendShapeType.Scale:
-              transformation = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, Vector3.one * _scale);
-              break;
-            default:
-              throw new InvalidOperationException();
-          }
-
-          if (_cachedBlendShape == null) {
-            _cachedBlendShape = Instantiate(mesh);
-            _cachedBlendShape.hideFlags = HideFlags.HideAndDontSave;
-            _cachedBlendShape.name = "Generated Blend Shape Mesh";
-          }
-
-          _cachedBlendShape.Clear();
-          _cachedBlendShape.vertices = mesh.vertices.Query().
-                                       Select(v => transformation.MultiplyPoint3x4(v)).
-                                       ToArray();
-          _cachedBlendShape.triangles = mesh.triangles;
-
-          return _cachedBlendShape;
+        switch (_type) {
+          case BlendShapeType.Translation:
+            transformation = Matrix4x4.TRS(_translation, Quaternion.identity, Vector3.one);
+            break;
+          case BlendShapeType.Rotation:
+            transformation = Matrix4x4.TRS(Vector3.zero, Quaternion.Euler(_rotation), Vector3.one);
+            break;
+          case BlendShapeType.Scale:
+            transformation = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, Vector3.one * _scale);
+            break;
+          case BlendShapeType.Transform:
+            if (_transform == null) {
+              return false;
+            }
+            transformation = _transform.localToWorldMatrix * transform.worldToLocalMatrix;
+            break;
+          default:
+            throw new InvalidOperationException();
         }
+
+        source.vertices.Query().Select(v => transformation.MultiplyPoint3x4(v)).FillList(offsetVerts);
+        return true;
       }
     }
 
@@ -109,6 +135,7 @@ namespace Leap.Unity.GraphicalRenderer {
       Translation,
       Rotation,
       Scale,
+      Transform,
       Mesh
     }
   }

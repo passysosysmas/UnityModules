@@ -4,7 +4,7 @@ namespace Leap.Unity.GraphicalRenderer {
 
   [CanEditMultipleObjects]
   [CustomEditor(typeof(LeapBlendShapeData))]
-  public class LeapBlendShapeDataEditor : CustomEditorBase {
+  public class LeapBlendShapeDataEditor : CustomEditorBase<LeapBlendShapeData> {
     protected override void OnEnable() {
       base.OnEnable();
 
@@ -15,7 +15,8 @@ namespace Leap.Unity.GraphicalRenderer {
       specifyConditionalDrawing("_type", (int)LeapBlendShapeData.BlendShapeType.Translation, "_translation");
       specifyConditionalDrawing("_type", (int)LeapBlendShapeData.BlendShapeType.Rotation, "_rotation");
       specifyConditionalDrawing("_type", (int)LeapBlendShapeData.BlendShapeType.Scale, "_scale");
-      specifyConditionalDrawing("_type", (int)LeapBlendShapeData.BlendShapeType.Mesh, "_mesh");
+      specifyConditionalDrawing("_type", (int)LeapBlendShapeData.BlendShapeType.Transform, "_transform");
+      specifyConditionalDrawing("_type", (int)LeapBlendShapeData.BlendShapeType.Mesh, "_blendShapeIndex");
     }
   }
 }
