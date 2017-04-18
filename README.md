@@ -10,7 +10,7 @@ To download Leap Motion's latest stable modules as .unitypackages, visit [our Un
 
 This repository is structured as a Unity project; clones as-is will open in Unity as a standard Unity project.
 
-**Core is the only dependency for all modules**, and is found in `Assets/LeapMotion/Core`.
+**Core is the only dependency for all modules**, and is found in `Assets/LeapMotion/Core`. Core will work fine on its own, and contains an extremely minimal "hello world"-style example scene for getting Leap hands into Unity.
 
 All other modules are found in `Assets/LeapMotion/Modules/<module-name>`. The available modules are:
 
