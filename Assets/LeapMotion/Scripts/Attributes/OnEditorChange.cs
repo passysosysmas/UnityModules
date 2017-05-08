@@ -1,9 +1,19 @@
-﻿using System;
+/******************************************************************************
+ * Copyright (C) Leap Motion, Inc. 2011-2017.                                 *
+ * Leap Motion proprietary and  confidential.                                 *
+ *                                                                            *
+ * Use subject to the terms of the Leap Motion SDK Agreement available at     *
+ * https://developer.leapmotion.com/sdk_agreement, or another agreement       *
+ * between Leap Motion and you, your company or other organization.           *
+ ******************************************************************************/
+
+using System;
 using System.Reflection;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 using UnityEngine;
+using UnityObject = UnityEngine.Object;
 
 namespace Leap.Unity.Attributes {
 
@@ -24,19 +34,19 @@ namespace Leap.Unity.Attributes {
     }
 
 #if UNITY_EDITOR
-    private Action<object> _cachedDelegate;
+    private Action<UnityObject, object> _cachedDelegate;
 
     public override void OnPropertyChanged(SerializedProperty property) {
       base.OnPropertyChanged(property);
 
       if (_cachedDelegate == null) {
-        Type type = component.GetType();
+        Type type = targets[0].GetType();
 
         PropertyInfo propertyInfo = type.GetProperty(methodName, BindingFlags.Public |
                                                                  BindingFlags.NonPublic |
                                                                  BindingFlags.Instance);
         if (propertyInfo != null) {
-          _cachedDelegate = arg => propertyInfo.SetValue(component, arg, null);
+          _cachedDelegate = (obj, arg) => propertyInfo.SetValue(obj, arg, null);
         } else {
           MethodInfo method = type.GetMethod(methodName, BindingFlags.Public |
                                                          BindingFlags.NonPublic |
@@ -51,12 +61,12 @@ namespace Leap.Unity.Attributes {
 
           int paramCount = method.GetParameters().Length;
           if (paramCount == 0) {
-            _cachedDelegate = arg => method.Invoke(component, null);
+            _cachedDelegate = (obj, arg) => method.Invoke(obj, null);
           } else if (paramCount == 1) {
             object[] argArray = new object[1];
-            _cachedDelegate = arg => {
+            _cachedDelegate = (obj, arg) => {
               argArray[0] = arg;
-              method.Invoke(component, argArray);
+              method.Invoke(obj, argArray);
             };
           } else {
             Debug.LogWarning("Could not invoke the method " + methodName + " from OnChange " +
@@ -66,8 +76,11 @@ namespace Leap.Unity.Attributes {
       }
 
       property.serializedObject.ApplyModifiedProperties();
-      object newValue = fieldInfo.GetValue(component);
-      _cachedDelegate(newValue);
+
+      foreach (var target in targets) {
+        object newValue = fieldInfo.GetValue(target);
+        _cachedDelegate(target, newValue);
+      }
     }
 #endif
   }
