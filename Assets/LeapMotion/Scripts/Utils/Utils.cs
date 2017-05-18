@@ -17,6 +17,14 @@ namespace Leap.Unity {
 
     #region Generic Utils
 
+    public static bool IsEven(this int value) {
+      return value % 2 == 0;
+    }
+
+    public static bool IsOdd(this int value) {
+      return !value.IsEven();
+    }
+
     /// <summary>
     /// Swaps the references of a and b.  Note that you can pass
     /// in references to array elements if you want!

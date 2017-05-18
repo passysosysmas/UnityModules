@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 using System;
+using System.Collections.Generic;
 
 namespace Leap.Unity.Query {
 
@@ -50,6 +51,19 @@ namespace Leap.Unity.Query {
     /// </summary>
     public QueryWrapper<QueryType, WhereOp<QueryType, QueryOp>> Where(Func<QueryType, bool> predicate) {
       return new QueryWrapper<QueryType, WhereOp<QueryType, QueryOp>>(new WhereOp<QueryType, QueryOp>(_op, predicate));
+    }
+
+    /// <summary>
+    /// Returns a new query operation representing only the elements in the sequence that mapped
+    /// to true values in the argument sequence.
+    /// 
+    /// For example:
+    ///   (A, B, C, D, E, F).Query().Where((true, true, false, false, true, false))
+    /// Would result in:
+    ///   (A, B, E)
+    /// </summary>
+    public QueryWrapper<QueryType, SelectOp<KeyValuePair<QueryType, bool>, QueryType, WhereOp<KeyValuePair<QueryType, bool>, ZipOp<KeyValuePair<QueryType, bool>, QueryType, bool, QueryOp, Top>>>> Where<Top>(QueryWrapper<bool, Top> t) where Top : IQueryOp<bool> {
+      return Zip(t, (a, b) => new KeyValuePair<QueryType, bool>(a, b)).Where(p => p.Value).Select<QueryType>(o => o.Key);
     }
 
     /// <summary>
