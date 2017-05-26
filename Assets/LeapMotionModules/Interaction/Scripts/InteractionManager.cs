@@ -22,102 +22,119 @@ using UnityEngine;
 
 namespace Leap.Unity.Interaction {
 
-  public partial class InteractionManager : MonoBehaviour, IRuntimeGizmoComponent {
+  [Serializable]
+  public class InteractionControllerSet : SerializableHashSet<InteractionController> { }
+  
+  [DisallowMultipleComponent]
+  [ExecuteInEditMode]
+  public class InteractionManager : MonoBehaviour, IRuntimeGizmoComponent {
 
-    [Header("Interaction Types")]
-    [Tooltip("Hovering provides callbacks to Interaction Behaviours when hands are nearby.")]
-    public bool enableHovering = true;
-    [Tooltip("Contact allows hands to collide with Interaction Behaviours in an intuitive way, "
-           + "and enables contact callbacks to Interaction Behaviours.")]
-    public bool enableContact  = true;
-    [Tooltip("With grasping enabled, hands can pick up, place, pass, or throw Interaction "
-           + "Behaviours. Grasping also provides grasp-related callbacks to Interaction "
-           + "Behaviours for specifying custom behavior.")]
-    public bool enableGrasping = true;
-
-    [Header("Advanced Settings")]
+    // Header "Interaction Controllers" via InteractionManagerEditor.cs.
     [SerializeField]
-    #pragma warning disable 0414
-    private bool _showAdvancedSettings = false;
-    #pragma warning restore 0414
+    private InteractionControllerSet _interactionControllers = new InteractionControllerSet();
+    /// <summary>
+    /// Gets the list of interaction controllers managed by this InteractionManager.
+    /// </summary>
+    public ReadonlyHashSet<InteractionController> interactionControllers {
+      get { return _interactionControllers; }
+    }
     
     [Header("Interaction Settings")]
+
     [SerializeField]
-    [DisableIf("enableHovering", isEqualTo: false)]
-    [Tooltip("Beyond this radius, an interaction object will not receive hover callbacks from a hand. (Smaller values are cheaper.) This value is automatically scaled under the hood by the Leap Service Provider's localScale.x.")]
+    [Tooltip("Beyond this radius, an interaction object will not receive hover or primary "
+           + "hover callbacks from an interaction controller. (Smaller values are "
+           + "cheaper.) This value is automatically scaled under the hood by the "
+           + "Interaction Manager's lossyScale.x, so it's recommended to keep your "
+           + "Interaction Manager with unit scale underneath your 'Player' Transform if "
+           + "you expect your player's hands or controllers to ever have non-unit scale.")]
     public float hoverActivationRadius = 0.2F;
-    [DisableIfAll("enableContact", "enableGrasping", areEqualTo: false)]
-    [Tooltip("Beyond this radius, an interaction object will not be considered for contact or grasping logic. The radius should be small as an optimization but certainly not smaller than a hand and not too tight around the hand to allow good behavior when the hand is moving quickly through space. This value is automatically scaled under the hood by the Leap Service Provider's localScale.x.")]
+
+    [Tooltip("Beyond this radius, an interaction object will not be considered for "
+           + "contact or grasping logic. The radius should be small as an optimization "
+           + "but certainly not smaller than an interaction controller and not too tight "
+           + "around the controller to allow good behavior when it is moving quickly "
+           + "through space. This value is automatically scaled under the hood by the "
+           + "Interaction Manager's lossyScale.x, so it's recommended to keep your "
+           + "Interaction Manager with unit scale underneath your 'Player' Transform if "
+           + "you expect your player's hands or controllers to ever have non-unit scale.")]
     public float touchActivationRadius = 0.075F;
 
     [Header("Layer Settings")]
-    [Tooltip("Whether or not to create the layers used for interaction when the scene runs. Hand interactions require an interaction layer (for objects), a grasped object layer, and a contact bone layer (for hand bones). Keep this checked to have these layers created for you, but be aware that the layers will have blank names due to Unity limitations.")]
+    [Tooltip("Whether or not to create the layers used for interaction when the scene "
+           + "runs. Interactions require an interaction layer (for objects), a grasped "
+           + "object layer, and a contact bone layer (for interaction controller 'bone'"
+           + "colliders). Keep this checked to have these layers created for you, but be "
+           + "aware that the generated layers will have blank names due to Unity "
+           + "limitations.")]
     [SerializeField]
+    [EditTimeOnly]
     protected bool _autoGenerateLayers = true;
-    /// <summary> Gets whether auto-generate layers was enabled for this Interaction Manager. </summary>
+    /// <summary>
+    /// Gets whether auto-generate layers was enabled for this Interaction Manager.
+    /// </summary>
     public bool autoGenerateLayers { get { return _autoGenerateLayers; } }
 
-    [Tooltip("When automatically generating layers, the Interaction layer (for interactable objects) will use the same physics collision flags as the layer specified here.")]
+    [Tooltip("When automatically generating layers, the Interaction layer (for "
+           + "interactable objects) will use the same physics collision flags as the "
+           + "layer specified here.")]
     [SerializeField]
     protected SingleLayer _templateLayer = 0;
     public SingleLayer templateLayer { get { return _templateLayer; } }
 
-    [Tooltip("The layer for interactable objects (i.e. InteractionBehaviours). Usually this would have the same collision flags as the Default layer, but it should be its own layer so hands don't have to check collision against all physics objects in the scene.")]
+    [Tooltip("The layer for interactable objects (i.e. InteractionBehaviours). Usually "
+           + "this would have the same collision flags as the Default layer, but it "
+           + "should be its own layer so interaction controllers don't have to check "
+           + "collision against all physics objects in the scene.")]
     [SerializeField]
     protected SingleLayer _interactionLayer = 0;
     public SingleLayer interactionLayer { get { return _interactionLayer; } }
 
-    [Tooltip("The layer objects are moved to when they become grasped, or if they are otherwise ignoring hand contact. This layer should not collide with the hand bone layer, but should collide with everything else that the interaction layer collides with.")]
+    [Tooltip("The layer objects are moved to when they become grasped, or if they are "
+           + "otherwise ignoring controller contact. This layer should not collide with "
+           + "the contact bone layer, but should collide with everything else that the "
+           + "interaction layer collides with.")]
     [SerializeField]
     protected SingleLayer _interactionNoContactLayer = 0;
     public SingleLayer interactionNoContactLayer { get { return _interactionNoContactLayer; } }
 
-    [Tooltip("The layer containing the collider bones of the hand. This layer should collide with anything you'd like to be able to touch, but it should not collide with the grasped object layer.")]
+    [Tooltip("The layer containing the collider 'bones' of the interaction controller. "
+           + "This layer should collide with anything you'd like to be able to touch, "
+           + "but it should not collide with the grasped object layer.")]
     [SerializeField]
     protected SingleLayer _contactBoneLayer = 0;
-    public SingleLayer ContactBoneLayer { get { return _contactBoneLayer; } }
+    public SingleLayer contactBoneLayer { get { return _contactBoneLayer; } }
 
     [Header("Debug Settings")]
     [SerializeField]
-    [Tooltip("Rendering runtime gizmos requires having a Runtime Gizmo Manager somewhere in the scene.")]
-    private bool _drawHandRuntimeGizmos = false;
-
-    /// <summary>
-    /// Provides Frame objects consisting of any and all Hands in the scene. 
-    /// 
-    /// Set by default on Awake(), but can be overridden manually for special situations
-    /// involving multiple LeapServiceProviders.
-    /// </summary>
-    public LeapServiceProvider Provider { get; set; }
-    private float _providerScale = 1F;
+    [Tooltip("Rendering runtime gizmos requires having a Runtime Gizmo Manager somewhere "
+           + "in the scene.")]
+    private bool _drawControllerRuntimeGizmos = false;
 
     public Action OnGraphicalUpdate = () => { };
     public Action OnPrePhysicalUpdate = () => { };
     public Action OnPostPhysicalUpdate = () => { };
 
-    /// <summary>
-    /// Interaction objects further than this distance from a given hand will not be
-    /// considered for any hover interactions with that hand.
-    /// </summary>
-    public float WorldHoverActivationRadius { get { return hoverActivationRadius * _providerScale; } }
+    private float _scale = 1F;
 
     /// <summary>
-    /// Interaction objects further than this distance from a given hand will not be
-    /// considered for any contact or grasping interactions with that hand.
+    /// Interaction objects further than this distance from a given controller's hover
+    /// point will not be considered for any hover interactions with that controller.
     /// </summary>
-    public float WorldTouchActivationRadius { get { return touchActivationRadius * _providerScale; } }
+    public float WorldHoverActivationRadius { get { return hoverActivationRadius * _scale; } }
+
+    /// <summary>
+    /// Interaction objects further than this distance from a given controller's hover
+    /// point will not be considered for any contact or grasping interactions with that
+    /// controller.
+    /// </summary>
+    public float WorldTouchActivationRadius { get { return touchActivationRadius * _scale; } }
 
     /// <summary>
     /// A scale that can be used to appropriately transform distances that otherwise expect
     /// one Unity unit to correspond to one meter.
     /// </summary>
-    public float SimulationScale { get { return _providerScale; } }
-
-    private InteractionHand[] _interactionHands = new InteractionHand[2];
-    /// <summary>
-    /// Gets the array of InteractionHands managed by this InteractionManager.
-    /// </summary>
-    public InteractionHand[] interactionHands { get { return _interactionHands; } }
+    public float SimulationScale { get { return _scale; } }
 
     private HashSet<IInteractionBehaviour> _interactionBehaviours = new HashSet<IInteractionBehaviour>();
 
@@ -141,10 +158,14 @@ namespace Leap.Unity.Interaction {
       }
     }
 
-    /// <summary> Stores data for implementing Soft Contact for InteractionHands. </summary>
+    /// <summary>
+    /// Stores data for implementing Soft Contact for interaction controllers.
+    /// </summary>
     [NonSerialized]
     public List<PhysicsUtility.SoftContact> _softContacts = new List<PhysicsUtility.SoftContact>(80);
-    /// <summary> Stores data for implementing Soft Contact for InteractionHands. </summary>
+    /// <summary>
+    /// Stores data for implementing Soft Contact for interaction controllers.
+    /// </summary>
     [NonSerialized]
     public Dictionary<Rigidbody, PhysicsUtility.Velocities> _softContactOriginalVelocities = new Dictionary<Rigidbody, PhysicsUtility.Velocities>(5);
 
@@ -178,50 +199,69 @@ namespace Leap.Unity.Interaction {
         generateAutomaticLayers();
       }
       
-      refreshInteractionHands();
+      refreshInteractionControllers();
     }
 
     void Awake() {
+      refreshInteractionControllers();
+
+      if (!Application.isPlaying) return;
+
       if (s_instance == null) s_instance = this;
-
-      Provider = Hands.Provider;
-
-      refreshInteractionHands();
 
       if (_autoGenerateLayers) {
         generateAutomaticLayers();
         setupAutomaticCollisionLayers();
       }
-    }
 
-    private Func<Hand> _getFixedLeftHand = new Func<Hand>(() => Hands.FixedLeft);
-    private Func<Hand> _getFixedRightHand = new Func<Hand>(() => Hands.FixedRight);
-
-    void OnEnable() {
-      if (Provider == null) {
-        Debug.LogError("[InteractionManager] No LeapServiceProvider found.");
-        this.enabled = false;
+      #if UNITY_EDITOR
+      if (_drawControllerRuntimeGizmos == true) {
+        if (FindObjectOfType<RuntimeGizmoManager>() == null) {
+          Debug.LogWarning("'_drawControllerRuntimeGizmos' is enabled, but there is no "
+                         + "RuntimeGizmoManager in your scene. Please add one if you'd "
+                         + "like to render gizmos in the editor and in your headset.");
+        }
       }
+      #endif
     }
 
     void OnDisable() {
-      foreach (var intHand in _interactionHands) {
-        intHand.EnableSoftContact(); // disables the colliders in the InteractionHand; soft contact won't be applied if the hand is not updating.
-        if (intHand.isGraspingObject) intHand.ReleaseGrasp();
+      #if UNITY_EDITOR
+      if (!Application.isPlaying) return;
+      #endif
+
+      foreach (var intController in _interactionControllers) {
+        // Disables the colliders in the interaction controller;
+        // soft contact won't be applied if the controller is not updating.
+        intController.EnableSoftContact();
+
+        if (intController.isGraspingObject) {
+          intController.ReleaseGrasp();
+        }
       }
     }
+
+    #if UNITY_EDITOR
+    void Update() {
+      refreshInteractionControllers();
+    }
+    #endif
 
     void FixedUpdate() {
       OnPrePhysicalUpdate();
 
-      using (new ProfilerSample("Interaction Manager FixedUpdate", this.gameObject)) {
-        // Ensure provider scale information is up-to-date.
-        if (Provider != null) {
-          _providerScale = Provider.transform.lossyScale.x;
-        }
+      refreshInteractionControllers();
 
-        // Update each hand's interactions.
-        fixedUpdateHands();
+      #if UNITY_EDITOR
+      if (!Application.isPlaying) return;
+      #endif
+
+      using (new ProfilerSample("Interaction Manager FixedUpdate", this.gameObject)) {
+        // Ensure scale information is up-to-date.
+        _scale = this.transform.lossyScale.x;
+        
+        // Update each interaction controller (Leap hands or supported VR controllers).
+        fixedUpdateInteractionControllers();
 
         // Perform each interaction object's FixedUpdateObject.
         using (new ProfilerSample("FixedUpdateObject per-InteractionBehaviour")) {
@@ -230,10 +270,10 @@ namespace Leap.Unity.Interaction {
           }
         }
 
-        // Apply soft contacts from both hands in unified solve.
+        // Apply soft contacts from all controllers in a unified solve.
         // (This will clear softContacts and originalVelocities as well.)
         using (new ProfilerSample("Apply Soft Contacts")) {
-          if (_softContacts.Count > 0 && enableContact) {
+          if (_softContacts.Count > 0) {
             PhysicsUtility.applySoftContacts(_softContacts, _softContactOriginalVelocities);
           }
         }
@@ -246,64 +286,39 @@ namespace Leap.Unity.Interaction {
       OnGraphicalUpdate();
     }
 
-    #region Public Methods
+    #region Controller Interaction State & Callbacks Update
 
-    /// <summary>
-    /// Returns the InteractionHand object that corresponds to the given Hand object.
-    /// 
-    /// Currently, the InteractionManager supports only two InteractionHands at one time: one player's left and right hands.
-    /// </summary>
-    public InteractionHand GetInteractionHand(Hand hand) {
-      if (hand.IsLeft) {
-        return _interactionHands[0];
-      }
-      else {
-        return _interactionHands[1];
-      }
-    }
-    public InteractionHand GetInteractionHand(bool isLeft) {
-      if (isLeft) {
-        return _interactionHands[0];
-      } else {
-        return _interactionHands[1];
-      }
-    }
+    private HashSet<InteractionController> _activeControllersBuffer = new HashSet<InteractionController>();
+    private HashSet<InteractionController> _hoverControllersBuffer = new HashSet<InteractionController>();
+    private HashSet<InteractionController> _contactControllersBuffer = new HashSet<InteractionController>();
+    private HashSet<InteractionController> _graspingControllersBuffer = new HashSet<InteractionController>();
 
-    /// <summary>
-    /// Returns true if the object was released from a grasped hand, or false
-    /// if the object was not held in the first place. This method will fail and return
-    /// false if the argument interaction object is not registered with this manager.
-    /// </summary>
-    public bool TryReleaseObjectFromGrasp(IInteractionBehaviour interactionObj) {
-      if (!_interactionBehaviours.Contains(interactionObj)) {
-        Debug.LogError("ReleaseObjectFromGrasp was called, but the interaction object " + interactionObj.transform.name + " is not registered "
-                     + "with this InteractionManager.");
-        return false;
+    private void fixedUpdateInteractionControllers() {
+
+      _hoverControllersBuffer.Clear();
+      _contactControllersBuffer.Clear();
+      _graspingControllersBuffer.Clear();
+      _activeControllersBuffer.Clear();
+      foreach (var controller in interactionControllers) {
+        if (!controller.isActiveAndEnabled) continue;
+
+        _activeControllersBuffer.Add(controller);
+
+        if (controller.hoverEnabled) _hoverControllersBuffer.Add(controller);
+        if (controller.contactEnabled) _contactControllersBuffer.Add(controller);
+        if (controller.graspingEnabled) _graspingControllersBuffer.Add(controller);
       }
 
-      var didRelease = false;
-      foreach (var hand in _interactionHands) {
-        if (hand.graspedObject == interactionObj) {
-          hand.ReleaseGrasp();
-          didRelease = true;
-        }
-      }
-      return didRelease;
-    }
-
-    #endregion
-
-    #region Hand Interactions State & Callbacks Update
-
-    private void fixedUpdateHands() {
-      using (new ProfilerSample("Fixed Update Hands (Hand Representations)")) {
-        // Perform general hand update, for hand representations
-        for (int i = 0; i < _interactionHands.Length; i++) {
-          _interactionHands[i].FixedUpdateHand(enableHovering, enableContact, enableGrasping);
+      using (new ProfilerSample("Fixed Update Controllers (General Update)")) {
+        // Perform general controller update, for controller collider and point
+        // representations.
+        foreach (var controller in _activeControllersBuffer) {
+          if (!controller.isActiveAndEnabled) continue;
+          controller.FixedUpdateController();
         }
       }
 
-      using (new ProfilerSample("Fixed Update Hands (Interaction State and Callbacks)")) {
+      using (new ProfilerSample("Fixed Update Controllers (Interaction State and Callbacks)")) {
 
         /* 
          * Interactions are checked here in a very specific manner so that interaction
@@ -312,11 +327,11 @@ namespace Leap.Unity.Interaction {
          * 
          * Interaction callbacks will only occur outside this order if a script
          * manually forces interaction state-changes; for example, calling
-         * interactionHand.ReleaseGrasp() will immediately call interactionObject.OnGraspEnd()
-         * on the formerly grasped object.
+         * interactionController.ReleaseGrasp() will immediately call
+         * interactionObject.OnPerControllerGraspEnd() on the formerly grasped object.
          * 
          * Callback order:
-         * - Suspension (when a grasped object's grasping hand loses tracking)
+         * - Suspension (when a grasped object's grasping controller loses tracking)
          * - Just-Ended Interactions (Grasps, then Contacts, then Hovers)
          * - Just-Begun Interactions (Hovers, then Contacts, then Grasps)
          * - Sustained Interactions (Hovers, then Contacts, then Grasps)
@@ -324,223 +339,327 @@ namespace Leap.Unity.Interaction {
 
         // Suspension //
 
-        // Check hands beginning object suspension.
-        foreach (var hand in _interactionHands) {
+        // Check controllers beginning object suspension.
+        foreach (var controller in _graspingControllersBuffer) {
           IInteractionBehaviour suspendedObj;
-          if (hand.CheckSuspensionBegin(out suspendedObj)) {
-            suspendedObj.BeginSuspension(hand);
+          if ((controller as IInternalInteractionController).CheckSuspensionBegin(out suspendedObj)) {
+            suspendedObj.BeginSuspension(controller);
           }
         }
 
-        // Check hands ending object suspension.
-        foreach (var hand in _interactionHands) {
+        // Check controllers ending object suspension.
+        foreach (var controller in _graspingControllersBuffer) {
           IInteractionBehaviour resumedObj;
-          if (hand.CheckSuspensionEnd(out resumedObj)) {
-            resumedObj.EndSuspension(hand);
+          if ((controller as IInternalInteractionController).CheckSuspensionEnd(out resumedObj)) {
+            resumedObj.EndSuspension(controller);
           }
         }
 
         // Ending Interactions //
 
-        // Check ending grasps.
-        remapInteractionObjectStateChecks(
-          stateCheckFunc: (InteractionHand maybeReleasingHand, out IInteractionBehaviour maybeReleasedObject) => {
-            return maybeReleasingHand.CheckGraspEnd(out maybeReleasedObject);
-          },
-          actionPerInteractionObject: (releasedObject, releasingIntHands) => {
-            releasedObject.EndGrasp(releasingIntHands);
-          });
-
-        // Check ending contacts.
-        remapMultiInteractionObjectStateChecks(
-          multiObjectStateCheckFunc: (InteractionHand maybeEndedContactingHand, out HashSet<IInteractionBehaviour> endContactedObjects) => {
-            return maybeEndedContactingHand.CheckContactEnd(out endContactedObjects);
-          },
-          actionPerInteractionObject: (endContactedObject, endContactedIntHands) => {
-            endContactedObject.EndContact(endContactedIntHands);
-          });
-
-        // Check ending primary hovers.
-        remapInteractionObjectStateChecks(
-          stateCheckFunc: (InteractionHand maybeEndedPrimaryHoveringHand, out IInteractionBehaviour endPrimaryHoveredObject) => {
-            return maybeEndedPrimaryHoveringHand.CheckPrimaryHoverEnd(out endPrimaryHoveredObject);
-          },
-          actionPerInteractionObject: (endPrimaryHoveredObject, noLongerPrimaryHoveringHands) => {
-            endPrimaryHoveredObject.EndPrimaryHover(noLongerPrimaryHoveringHands);
-          });
-
-        // Check ending hovers.
-        remapMultiInteractionObjectStateChecks(
-          multiObjectStateCheckFunc: (InteractionHand maybeEndedHoveringHand, out HashSet<IInteractionBehaviour> endHoveredObjects) => {
-            return maybeEndedHoveringHand.CheckHoverEnd(out endHoveredObjects);
-          },
-          actionPerInteractionObject: (endHoveredObject, endHoveringIntHands) => {
-            endHoveredObject.EndHover(endHoveringIntHands);
-          });
+        checkEndingGrasps(_graspingControllersBuffer);
+        checkEndingContacts(_contactControllersBuffer);
+        checkEndingPrimaryHovers(_hoverControllersBuffer);
+        checkEndingHovers(_hoverControllersBuffer);
 
         // Beginning Interactions //
 
-        // Check beginning hovers.
-        if (enableHovering) {
-          remapMultiInteractionObjectStateChecks(
-            multiObjectStateCheckFunc: (InteractionHand maybeBeganHoveringHand, out HashSet<IInteractionBehaviour> beganHoveredObjects) => {
-              return maybeBeganHoveringHand.CheckHoverBegin(out beganHoveredObjects);
-            },
-            actionPerInteractionObject: (beganHoveredObject, beganHoveringIntHands) => {
-              beganHoveredObject.BeginHover(beganHoveringIntHands);
-            });
-        }
-
-        // Check beginning primary hovers.
-        if (enableHovering) {
-          remapInteractionObjectStateChecks(
-            stateCheckFunc: (InteractionHand maybeBeganPrimaryHoveringHand, out IInteractionBehaviour primaryHoveredObject) => {
-              return maybeBeganPrimaryHoveringHand.CheckPrimaryHoverBegin(out primaryHoveredObject);
-            },
-            actionPerInteractionObject: (newlyPrimaryHoveredObject, beganPrimaryHoveringHands) => {
-              newlyPrimaryHoveredObject.BeginPrimaryHover(beganPrimaryHoveringHands);
-            });
-        }
-
-        // Check beginning contacts.
-        if (enableContact) {
-          remapMultiInteractionObjectStateChecks(
-            multiObjectStateCheckFunc: (InteractionHand maybeBeganContactingHand, out HashSet<IInteractionBehaviour> beganContactedObjects) => {
-              return maybeBeganContactingHand.CheckContactBegin(out beganContactedObjects);
-            },
-            actionPerInteractionObject: (beganContactedObject, beganContactingIntHands) => {
-              beganContactedObject.BeginContact(beganContactingIntHands);
-            });
-        }
-
-        // Check beginning grasps.
-        if (enableGrasping) {
-          remapInteractionObjectStateChecks(
-            stateCheckFunc: (InteractionHand maybeBeganGraspingHand, out IInteractionBehaviour graspedObject) => {
-              return maybeBeganGraspingHand.CheckGraspBegin(out graspedObject);
-            },
-            actionPerInteractionObject: (newlyGraspedObject, beganGraspingIntHands) => {
-              newlyGraspedObject.BeginGrasp(beganGraspingIntHands);
-            });
-        }
+        checkBeginningHovers(_hoverControllersBuffer);
+        checkBeginningPrimaryHovers(_hoverControllersBuffer);
+        checkBeginningContacts(_contactControllersBuffer);
+        checkBeginningGrasps(_graspingControllersBuffer);
 
         // Sustained Interactions //
 
-        // Check sustaining hover.
-        if (enableHovering) {
-          remapMultiInteractionObjectStateChecks(
-            multiObjectStateCheckFunc: (InteractionHand maybeSustainedHoveringHand, out HashSet<IInteractionBehaviour> hoveredObjects) => {
-              return maybeSustainedHoveringHand.CheckHoverStay(out hoveredObjects);
-            },
-            actionPerInteractionObject: (hoveredObject, hoveringIntHands) => {
-              hoveredObject.StayHovered(hoveringIntHands);
-            });
-        }
-
-        // Check sustaining primary hovers.
-        if (enableHovering) {
-          remapInteractionObjectStateChecks(
-            stateCheckFunc: (InteractionHand maybeSustainedPrimaryHoveringHand, out IInteractionBehaviour primaryHoveredObject) => {
-              return maybeSustainedPrimaryHoveringHand.CheckPrimaryHoverStay(out primaryHoveredObject);
-            },
-            actionPerInteractionObject: (primaryHoveredObject, primaryHoveringHands) => {
-              primaryHoveredObject.StayPrimaryHovered(primaryHoveringHands);
-            });
-        }
-
-        // Check sustained contact.
-        if (enableContact) {
-          remapMultiInteractionObjectStateChecks(
-            multiObjectStateCheckFunc: (InteractionHand maybeSustainedContactingHand, out HashSet<IInteractionBehaviour> contactedObjects) => {
-              return maybeSustainedContactingHand.CheckContactStay(out contactedObjects);
-            },
-            actionPerInteractionObject: (contactedObject, contactingIntHands) => {
-              contactedObject.StayContacted(contactingIntHands);
-            });
-        }
-
-        // Check sustained grasping.
-        if (enableContact) {
-          remapInteractionObjectStateChecks(
-            stateCheckFunc: (InteractionHand maybeSustainedGraspingHand, out IInteractionBehaviour graspedObject) => {
-              return maybeSustainedGraspingHand.CheckGraspHold(out graspedObject);
-            },
-            actionPerInteractionObject: (contactedObject, contactingIntHands) => {
-              contactedObject.StayGrasped(contactingIntHands);
-            });
-        }
+        checkSustainingHovers(_hoverControllersBuffer);
+        checkSustainingPrimaryHovers(_hoverControllersBuffer);
+        checkSustainingContacts(_contactControllersBuffer);
+        checkSustainingGrasps(_graspingControllersBuffer);
 
       }
+    }
+
+    #region State-Check Remapping Functions
+
+    private void checkEndingGrasps(ReadonlyHashSet<InteractionController> interactionControllers) {
+      remapInteractionObjectStateChecks(
+        controllers: interactionControllers,
+        stateCheckFunc: (InteractionController maybeReleasingController, out IInteractionBehaviour maybeReleasedObject) => {
+          return (maybeReleasingController as IInternalInteractionController).CheckGraspEnd(out maybeReleasedObject);
+        },
+        actionPerInteractionObject: (releasedObject, releasingIntControllers) => {
+          releasedObject.EndGrasp(releasingIntControllers);
+        });
+    }
+
+    private void checkEndingContacts(ReadonlyHashSet<InteractionController> interactionControllers) {
+      remapMultiInteractionObjectStateChecks(
+        controllers: interactionControllers,
+        multiObjectStateCheckFunc: (InteractionController maybeEndedContactingController, out HashSet<IInteractionBehaviour> endContactedObjects) => {
+          return (maybeEndedContactingController as IInternalInteractionController).CheckContactEnd(out endContactedObjects);
+        },
+        actionPerInteractionObject: (endContactedObject, endContactedIntControllers) => {
+          endContactedObject.EndContact(endContactedIntControllers);
+        });
+    }
+
+    private void checkEndingPrimaryHovers(ReadonlyHashSet<InteractionController> interactionControllers) {
+      remapInteractionObjectStateChecks(
+        controllers: interactionControllers,
+        stateCheckFunc: (InteractionController maybeEndedPrimaryHoveringController, out IInteractionBehaviour endPrimaryHoveredObject) => {
+          return (maybeEndedPrimaryHoveringController as IInternalInteractionController).CheckPrimaryHoverEnd(out endPrimaryHoveredObject);
+        },
+        actionPerInteractionObject: (endPrimaryHoveredObject, noLongerPrimaryHoveringControllers) => {
+          endPrimaryHoveredObject.EndPrimaryHover(noLongerPrimaryHoveringControllers);
+        });
+    }
+
+    private void checkEndingHovers(ReadonlyHashSet<InteractionController> interactionControllers) {
+      remapMultiInteractionObjectStateChecks(
+        controllers: interactionControllers,
+        multiObjectStateCheckFunc: (InteractionController maybeEndedHoveringController, out HashSet<IInteractionBehaviour> endHoveredObjects) => {
+          return (maybeEndedHoveringController as IInternalInteractionController).CheckHoverEnd(out endHoveredObjects);
+        },
+        actionPerInteractionObject: (endHoveredObject, endHoveringIntControllers) => {
+          endHoveredObject.EndHover(endHoveringIntControllers);
+        });
+    }
+
+    private void checkBeginningHovers(ReadonlyHashSet<InteractionController> interactionControllers) {
+      remapMultiInteractionObjectStateChecks(
+        controllers: interactionControllers,
+        multiObjectStateCheckFunc: (InteractionController maybeBeganHoveringController, out HashSet<IInteractionBehaviour> beganHoveredObjects) => {
+          return (maybeBeganHoveringController as IInternalInteractionController).CheckHoverBegin(out beganHoveredObjects);
+        },
+        actionPerInteractionObject: (beganHoveredObject, beganHoveringIntControllers) => {
+          beganHoveredObject.BeginHover(beganHoveringIntControllers);
+        });
+    }
+
+    private void checkBeginningPrimaryHovers(ReadonlyHashSet<InteractionController> interactionControllers) {
+      remapInteractionObjectStateChecks(
+        controllers: interactionControllers,
+        stateCheckFunc: (InteractionController maybeBeganPrimaryHoveringController, out IInteractionBehaviour primaryHoveredObject) => {
+          return (maybeBeganPrimaryHoveringController as IInternalInteractionController).CheckPrimaryHoverBegin(out primaryHoveredObject);
+        },
+        actionPerInteractionObject: (newlyPrimaryHoveredObject, beganPrimaryHoveringControllers) => {
+          newlyPrimaryHoveredObject.BeginPrimaryHover(beganPrimaryHoveringControllers);
+        });
+    }
+
+    private void checkBeginningContacts(ReadonlyHashSet<InteractionController> interactionControllers) {
+      remapMultiInteractionObjectStateChecks(
+        controllers: interactionControllers,
+        multiObjectStateCheckFunc: (InteractionController maybeBeganContactingController, out HashSet<IInteractionBehaviour> beganContactedObjects) => {
+          return (maybeBeganContactingController as IInternalInteractionController).CheckContactBegin(out beganContactedObjects);
+        },
+        actionPerInteractionObject: (beganContactedObject, beganContactingIntControllers) => {
+          beganContactedObject.BeginContact(beganContactingIntControllers);
+        });
+    }
+
+    private void checkBeginningGrasps(ReadonlyHashSet<InteractionController> interactionControllers) {
+      remapInteractionObjectStateChecks(
+        controllers: interactionControllers,
+        stateCheckFunc: (InteractionController maybeBeganGraspingController, out IInteractionBehaviour graspedObject) => {
+          return (maybeBeganGraspingController as IInternalInteractionController).CheckGraspBegin(out graspedObject);
+        },
+        actionPerInteractionObject: (newlyGraspedObject, beganGraspingIntControllers) => {
+          newlyGraspedObject.BeginGrasp(beganGraspingIntControllers);
+        });
+    }
+
+    private void checkSustainingHovers(ReadonlyHashSet<InteractionController> interactionControllers) {
+      remapMultiInteractionObjectStateChecks(
+        controllers: interactionControllers,
+        multiObjectStateCheckFunc: (InteractionController maybeSustainedHoveringController, out HashSet<IInteractionBehaviour> hoveredObjects) => {
+          return (maybeSustainedHoveringController as IInternalInteractionController).CheckHoverStay(out hoveredObjects);
+        },
+        actionPerInteractionObject: (hoveredObject, hoveringIntControllers) => {
+          hoveredObject.StayHovered(hoveringIntControllers);
+        });
+    }
+
+    private void checkSustainingPrimaryHovers(ReadonlyHashSet<InteractionController> interactionControllers) {
+      remapInteractionObjectStateChecks(
+        controllers: interactionControllers,
+        stateCheckFunc: (InteractionController maybeSustainedPrimaryHoveringController, out IInteractionBehaviour primaryHoveredObject) => {
+          return (maybeSustainedPrimaryHoveringController as IInternalInteractionController).CheckPrimaryHoverStay(out primaryHoveredObject);
+        },
+        actionPerInteractionObject: (primaryHoveredObject, primaryHoveringControllers) => {
+          primaryHoveredObject.StayPrimaryHovered(primaryHoveringControllers);
+        });
+    }
+
+    private void checkSustainingContacts(ReadonlyHashSet<InteractionController> interactionControllers) {
+      remapMultiInteractionObjectStateChecks(
+        controllers: interactionControllers,
+        multiObjectStateCheckFunc: (InteractionController maybeSustainedContactingController, out HashSet<IInteractionBehaviour> contactedObjects) => {
+          return (maybeSustainedContactingController as IInternalInteractionController).CheckContactStay(out contactedObjects);
+        },
+        actionPerInteractionObject: (contactedObject, contactingIntControllers) => {
+          contactedObject.StayContacted(contactingIntControllers);
+        });
+    }
+
+    private void checkSustainingGrasps(ReadonlyHashSet<InteractionController> interactionControllers) {
+      remapInteractionObjectStateChecks(
+        controllers: interactionControllers,
+        stateCheckFunc: (InteractionController maybeSustainedGraspingController, out IInteractionBehaviour graspedObject) => {
+          return (maybeSustainedGraspingController as IInternalInteractionController).CheckGraspHold(out graspedObject);
+        },
+        actionPerInteractionObject: (contactedObject, contactingIntControllers) => {
+          contactedObject.StayGrasped(contactingIntControllers);
+        });
     }
     
-    private delegate bool StateChangeCheckFunc(InteractionHand hand, out IInteractionBehaviour obj);
-    private delegate bool MultiStateChangeCheckFunc(InteractionHand hand, out HashSet<IInteractionBehaviour> objs);
+    private delegate bool StateChangeCheckFunc(InteractionController controller, out IInteractionBehaviour obj);
+    private delegate bool MultiStateChangeCheckFunc(InteractionController controller, out HashSet<IInteractionBehaviour> objs);
 
     [ThreadStatic]
-    private static Dictionary<IInteractionBehaviour, List<InteractionHand>> s_objHandsMap = new Dictionary<IInteractionBehaviour, List<InteractionHand>>();
+    private static Dictionary<IInteractionBehaviour, List<InteractionController>> s_objControllersMap = new Dictionary<IInteractionBehaviour, List<InteractionController>>();
 
     /// <summary>
-    /// Checks object state per-hand, then calls an action per-object with all hand checks that reported back an object.
+    /// Checks object state per-controller, then calls an action per-object with all controller checks that reported back an object.
     /// </summary>
-    private void remapInteractionObjectStateChecks(StateChangeCheckFunc stateCheckFunc,
-                                                   Action<IInteractionBehaviour, List<InteractionHand>> actionPerInteractionObject) {
+    private void remapInteractionObjectStateChecks(ReadonlyHashSet<InteractionController> controllers,
+                                                   StateChangeCheckFunc stateCheckFunc,
+                                                   Action<IInteractionBehaviour, List<InteractionController>> actionPerInteractionObject) {
 
-      // Ensure the object->hands buffer is non-null (ThreadStatic quirk) and clean.
-      if (s_objHandsMap == null) s_objHandsMap = new Dictionary<IInteractionBehaviour,List<InteractionHand>>();
-      s_objHandsMap.Clear();
+      // Ensure the object->controllers buffer is non-null (ThreadStatic quirk) and clean.
+      if (s_objControllersMap == null) s_objControllersMap = new Dictionary<IInteractionBehaviour,List<InteractionController>>();
+      s_objControllersMap.Clear();
 
-      // In a nutshell, this remaps methods per-hand that output an interaction object if the hand changed that object's state
-      // to methods per-object with all of the hands for which the check produced a state-change.
-      foreach (var hand in _interactionHands) {
+      // In a nutshell, this remaps methods per-controller that output an interaction object if the controller changed that object's state
+      // to methods per-object with all of the controllers for which the check produced a state-change.
+      foreach (var controller in controllers) {
         IInteractionBehaviour objectWhoseStateChanged;
-        if (stateCheckFunc(hand, out objectWhoseStateChanged)) {
-          if (!s_objHandsMap.ContainsKey(objectWhoseStateChanged)) {
-            s_objHandsMap[objectWhoseStateChanged] = Pool<List<InteractionHand>>.Spawn();
+        if (stateCheckFunc(controller, out objectWhoseStateChanged)) {
+          if (!s_objControllersMap.ContainsKey(objectWhoseStateChanged)) {
+            s_objControllersMap[objectWhoseStateChanged] = Pool<List<InteractionController>>.Spawn();
           }
-          s_objHandsMap[objectWhoseStateChanged].Add(hand);
+          s_objControllersMap[objectWhoseStateChanged].Add(controller);
         }
       }
-      // Finally, iterate through each (object, hands) pair and call the action for each pair
-      foreach (var objHandsPair in s_objHandsMap) {
-        actionPerInteractionObject(objHandsPair.Key, objHandsPair.Value);
+      // Finally, iterate through each (object, controllers) pair and call the action for each pair
+      foreach (var objControllesPair in s_objControllersMap) {
+        actionPerInteractionObject(objControllesPair.Key, objControllesPair.Value);
 
-        // Clear each hands list and return it to the list pool.
-        objHandsPair.Value.Clear();
-        Pool<List<InteractionHand>>.Recycle(objHandsPair.Value);
+        // Clear each controllers list and return it to the list pool.
+        objControllesPair.Value.Clear();
+        Pool<List<InteractionController>>.Recycle(objControllesPair.Value);
       }
     }
 
     /// <summary>
-    /// Checks object state per-hand, then calls an action per-object with all hand checks that reported back objects.
+    /// Checks object state per-controller, then calls an action per-object with all controller checks that reported back objects.
     /// </summary>
-    private void remapMultiInteractionObjectStateChecks(MultiStateChangeCheckFunc multiObjectStateCheckFunc,
-                                                        Action<IInteractionBehaviour, List<InteractionHand>> actionPerInteractionObject) {
-      // Ensure object<->hands buffer is non-null (ThreadStatic quirk) and clean.
-      if (s_objHandsMap == null) s_objHandsMap = new Dictionary<IInteractionBehaviour, List<InteractionHand>>();
-      s_objHandsMap.Clear();
+    private void remapMultiInteractionObjectStateChecks(ReadonlyHashSet<InteractionController> controllers,
+                                                        MultiStateChangeCheckFunc multiObjectStateCheckFunc,
+                                                        Action<IInteractionBehaviour, List<InteractionController>> actionPerInteractionObject) {
+      // Ensure object<->controllers buffer is non-null (ThreadStatic quirk) and clean.
+      if (s_objControllersMap == null) s_objControllersMap = new Dictionary<IInteractionBehaviour, List<InteractionController>>();
+      s_objControllersMap.Clear();
 
-      // In a nutshell, this remaps methods per-hand that output multiple interaction objects if the hand changed those objects' states
-      // to methods per-object with all of the hands for which the check produced a state-change.
-      foreach (var hand in _interactionHands) {
+      // In a nutshell, this remaps methods per-controller that output multiple interaction objects if the controller changed those objects' states
+      // to methods per-object with all of the controllers for which the check produced a state-change.
+      foreach (var controller in controllers) {
         HashSet<IInteractionBehaviour> stateChangedObjects;
-        if (multiObjectStateCheckFunc(hand, out stateChangedObjects)) {
+        if (multiObjectStateCheckFunc(controller, out stateChangedObjects)) {
           foreach (var stateChangedObject in stateChangedObjects) {
-            if (!s_objHandsMap.ContainsKey(stateChangedObject)) {
-              s_objHandsMap[stateChangedObject] = Pool<List<InteractionHand>>.Spawn();
+            if (!s_objControllersMap.ContainsKey(stateChangedObject)) {
+              s_objControllersMap[stateChangedObject] = Pool<List<InteractionController>>.Spawn();
             }
-            s_objHandsMap[stateChangedObject].Add(hand);
+            s_objControllersMap[stateChangedObject].Add(controller);
           }
         }
       }
-      // Finally, iterate through each (object, hands) pair and call the action for each pair
-      foreach (var objHandsPair in s_objHandsMap) {
-        actionPerInteractionObject(objHandsPair.Key, objHandsPair.Value);
+      // Finally, iterate through each (object, controllers) pair and call the action for each pair
+      foreach (var objControllersPair in s_objControllersMap) {
+        actionPerInteractionObject(objControllersPair.Key, objControllersPair.Value);
 
-        // Clear each hands list and return it to the list pool.
-        objHandsPair.Value.Clear();
-        Pool<List<InteractionHand>>.Recycle(objHandsPair.Value);
+        // Clear each controllers list and return it to the list pool.
+        objControllersPair.Value.Clear();
+        Pool<List<InteractionController>>.Recycle(objControllersPair.Value);
       }
     }
+
+    #endregion
+
+    #region State Notifications
+
+    // TODO: Delete this whole sction
+
+    //private HashSet<InteractionController> controllerSetBuffer = new HashSet<InteractionController>();
+
+    //void IInternalInteractionManager.NotifyControllerDisabled(InteractionController controller) {
+    //  controllerSetBuffer.Clear();
+    //  controllerSetBuffer.Add(controller);
+
+    //  checkEndingGrasps(controllerSetBuffer);
+    //  checkEndingContacts(controllerSetBuffer);
+    //  checkEndingPrimaryHovers(controllerSetBuffer);
+    //  checkEndingHovers(controllerSetBuffer);
+    //}
+
+    //void IInternalInteractionManager.NotifyHoverDisabled(InteractionController controller) {
+    //  controllerSetBuffer.Clear();
+    //  controllerSetBuffer.Add(controller);
+
+    //  checkEndingPrimaryHovers(controllerSetBuffer);
+    //  checkEndingHovers(controllerSetBuffer);
+    //}
+
+    //void IInternalInteractionManager.NotifyContactDisabled(InteractionController controller) {
+    //  controllerSetBuffer.Clear();
+    //  controllerSetBuffer.Add(controller);
+
+    //  checkEndingContacts(controllerSetBuffer);
+    //}
+
+    //void IInternalInteractionManager.NotifyObjectHoverIgnored(IInteractionBehaviour intObj) {
+    //  controllerSetBuffer.Clear();
+
+    //  foreach (var controller in interactionControllers) {
+    //    if (controller.hoveredObjects.Contains(intObj)) {
+    //      (controller as IInternalInteractionController).ClearHoverTrackingForObject(intObj);
+
+    //      controllerSetBuffer.Add(controller);
+    //    }
+    //  }
+
+    //  checkEndingHovers(controllerSetBuffer);
+    //}
+
+    //void IInternalInteractionManager.NotifyObjectPrimaryHoverIgnored(IInteractionBehaviour intObj) {
+    //  controllerSetBuffer.Clear();
+
+    //  foreach (var controller in interactionControllers) {
+    //    if (controller.primaryHoveredObject == intObj) {
+    //      (controller as IInternalInteractionController).ClearPrimaryHoverTrackingForObject(intObj);
+
+    //      controllerSetBuffer.Add(controller);
+    //    }
+    //  }
+
+    //  checkEndingPrimaryHovers(controllerSetBuffer);
+    //}
+
+    //void IInternalInteractionManager.NotifyObjectContactIgnored(IInteractionBehaviour intObj) {
+    //  controllerSetBuffer.Clear();
+
+    //  foreach (var controller in interactionControllers) {
+    //    if (controller.contactingObjects.Contains(intObj)) {
+    //      (controller as IInternalInteractionController).ClearContactTrackingForObject(intObj);
+
+    //      controllerSetBuffer.Add(controller);
+    //    }
+    //  }
+
+    //  checkEndingContacts(controllerSetBuffer);
+    //}
+
+    #endregion
 
     #endregion
 
@@ -551,16 +670,21 @@ namespace Leap.Unity.Interaction {
       interactionObjectBodies[interactionObj.rigidbody] = interactionObj;
     }
 
-    /// <summary> Returns true if the Interaction Behaviour was registered with this manager; otherwise returns false. 
-    /// The manager is guaranteed not to have the Interaction Behaviour registered after calling this method. </summary>
+    /// <summary>
+    /// Returns true if the Interaction Behaviour was registered with this manager;
+    /// otherwise returns false. The manager is guaranteed not to have the Interaction
+    /// Behaviour registered after calling this method.
+    /// </summary>
     public bool UnregisterInteractionBehaviour(IInteractionBehaviour interactionObj) {
       bool wasRemovalSuccessful = _interactionBehaviours.Remove(interactionObj);
       if (wasRemovalSuccessful) {
-        foreach (var intHand in _interactionHands) {
-          intHand.ReleaseObject(interactionObj);
-          intHand.grabClassifier.UnregisterInteractionBehaviour(interactionObj);
+        foreach (var intController in _interactionControllers) {
+          intController.ReleaseObject(interactionObj);
+
+          intController.NotifyObjectUnregistered(interactionObj);
         }
-        interactionObjectBodies.Remove(interactionObj.rigidbody);      }
+        interactionObjectBodies.Remove(interactionObj.rigidbody);
+      }
       return wasRemovalSuccessful;
     }
 
@@ -568,47 +692,19 @@ namespace Leap.Unity.Interaction {
       return _interactionBehaviours.Contains(interactionObj);
     }
 
-    // TODO: Allow InteractionBehaviours to be unregistered; this should call out to hands and
-    // handle their grasped object state appropriately if their grasped object was just unregistered.
-
     #endregion
 
     #region Internal
 
-    private void refreshInteractionHands() {
-      int handsIdx = 0;
-      foreach (var child in this.transform.GetChildren()) {
-        InteractionHand intHand = child.GetComponent<InteractionHand>();
-        if (intHand != null) {
-          _interactionHands[handsIdx++] = intHand;
-        }
-        if (handsIdx == 2) break;
-      }
+    private void refreshInteractionControllers() {
+      _interactionControllers.Clear();
 
-#if UNITY_EDITOR
-      PrefabType prefabType = PrefabUtility.GetPrefabType(this.gameObject);
-      if (prefabType == PrefabType.Prefab || prefabType == PrefabType.ModelPrefab) {
-        return;
+      foreach (var controller in this.transform.GetChildren()
+                                               .Query()
+                                               .Select(g => g.GetComponent<InteractionController>())
+                                               .Where(c => c != null && c.gameObject.activeSelf)) {
+        _interactionControllers.Add(controller);
       }
-#endif
-
-      if (_interactionHands[0] == null) {
-        GameObject obj = new GameObject();
-        _interactionHands[0] = obj.AddComponent<InteractionHand>();
-      }
-      _interactionHands[0].gameObject.name = "Interaction Hand (Left)";
-      _interactionHands[0].interactionManager = this;
-      _interactionHands[0].handAccessor = _getFixedLeftHand;
-      _interactionHands[0].transform.parent = this.transform;
-
-      if (_interactionHands[1] == null) {
-        GameObject obj = new GameObject();
-        _interactionHands[1] = obj.AddComponent<InteractionHand>();
-      }
-      _interactionHands[1].gameObject.name = "Interaction Hand (Right)";
-      _interactionHands[1].interactionManager = this;
-      _interactionHands[1].handAccessor = _getFixedRightHand;
-      _interactionHands[1].transform.parent = this.transform;
     }
 
     protected void generateAutomaticLayers() {
@@ -635,7 +731,8 @@ namespace Leap.Unity.Interaction {
         if (Application.isPlaying) {
           enabled = false;
         }
-        Debug.LogError("InteractionManager Could not find enough free layers for auto-setup, manual setup required.");
+        Debug.LogError("InteractionManager Could not find enough free layers for "
+                     + "auto-setup; manual setup is required.", this.gameObject);
         _autoGenerateLayers = false;
         return;
       }
@@ -661,10 +758,10 @@ namespace Leap.Unity.Interaction {
     #region Runtime Gizmos
 
     public void OnDrawRuntimeGizmos(RuntimeGizmoDrawer drawer) {
-      if (_drawHandRuntimeGizmos) {
-        foreach (var hand in _interactionHands) {
-          if (hand != null) {
-            hand.OnDrawRuntimeGizmos(drawer);
+      if (_drawControllerRuntimeGizmos) {
+        foreach (var controller in _interactionControllers) {
+          if (controller != null) {
+            controller.OnDrawRuntimeGizmos(drawer);
           }
         }
       }

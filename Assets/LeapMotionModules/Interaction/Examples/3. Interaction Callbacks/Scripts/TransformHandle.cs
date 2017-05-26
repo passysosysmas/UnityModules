@@ -1,4 +1,13 @@
-﻿using Leap.Unity.Interaction;
+/******************************************************************************
+ * Copyright (C) Leap Motion, Inc. 2011-2017.                                 *
+ * Leap Motion proprietary and  confidential.                                 *
+ *                                                                            *
+ * Use subject to the terms of the Leap Motion SDK Agreement available at     *
+ * https://developer.leapmotion.com/sdk_agreement, or another agreement       *
+ * between Leap Motion and you, your company or other organization.           *
+ ******************************************************************************/
+
+using Leap.Unity.Interaction;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -20,8 +29,8 @@ namespace Leap.Unity.Examples {
 
     protected virtual void Start() {
       _intObj = GetComponent<InteractionBehaviour>();
-      _intObj.OnObjectGraspBegin += onObjectGraspBegin;
-      _intObj.OnObjectGraspEnd += onObjectGraspEnd;
+      _intObj.OnGraspBegin += onGraspBegin;
+      _intObj.OnGraspEnd += onGraspEnd;
 
       _tool = GetComponentInParent<TransformTool>();
       if (_tool == null) Debug.LogError("No TransformTool found in a parent GameObject.");
@@ -32,13 +41,13 @@ namespace Leap.Unity.Examples {
       _intObj.rigidbody.rotation = this.transform.rotation;
     }
 
-    private void onObjectGraspBegin(List<InteractionHand> hands) {
+    private void onGraspBegin() {
       _tool.NotifyHandleActivated(this);
 
       OnHandleActivated.Invoke();
     }
 
-    private void onObjectGraspEnd(List<InteractionHand> hands) {
+    private void onGraspEnd() {
       _tool.NotifyHandleDeactivated(this);
 
       OnHandleDeactivated.Invoke();

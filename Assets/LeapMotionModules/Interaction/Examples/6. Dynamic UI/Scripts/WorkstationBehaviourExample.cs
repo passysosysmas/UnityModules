@@ -1,4 +1,13 @@
-﻿using Leap.Unity.Animation;
+/******************************************************************************
+ * Copyright (C) Leap Motion, Inc. 2011-2017.                                 *
+ * Leap Motion proprietary and  confidential.                                 *
+ *                                                                            *
+ * Use subject to the terms of the Leap Motion SDK Agreement available at     *
+ * https://developer.leapmotion.com/sdk_agreement, or another agreement       *
+ * between Leap Motion and you, your company or other organization.           *
+ ******************************************************************************/
+
+using Leap.Unity.Animation;
 using Leap.Unity.Interaction;
 using System.Collections;
 using System.Collections.Generic;
@@ -126,7 +135,9 @@ namespace Leap.Unity.Examples {
       _anchObj.OnPostTryAnchorOnGraspEnd += onPostObjectGraspEnd;
     }
 
-    private void onGraspedMovement(Vector3 preSolvePos, Quaternion preSolveRot, Vector3 curPos, Quaternion curRot, List<InteractionHand> hands) {
+    private void onGraspedMovement(Vector3 preSolvePos, Quaternion preSolveRot,
+                                   Vector3 curPos, Quaternion curRot,
+                                   List<InteractionController> controllers) {
       // If the workstation is not fully open when grasped, close it.
       if (workstationState == WorkstationState.Opening) {
         DeactivateWorkstation();

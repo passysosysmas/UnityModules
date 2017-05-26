@@ -45,14 +45,14 @@ namespace Leap.Unity.Interaction.Internal {
       _defaultGrabParams = new GrabClassifierHeuristics.ClassifierParameters(
         fingerStickiness, thumbStickiness, maxCurl, minCurl, fingerRadius,
         thumbRadius, grabCooldown, maxCurlVel, maxGrabDistance,
-        layerMask == 0 ? (interactionHand.interactionManager.interactionLayer.layerMask
-                          | interactionHand.interactionManager.interactionNoContactLayer.layerMask) : layerMask,
+        layerMask == 0 ? (interactionHand.manager.interactionLayer.layerMask
+                          | interactionHand.manager.interactionNoContactLayer.layerMask) : layerMask,
         queryTriggers);
       _scaledGrabParams = new GrabClassifierHeuristics.ClassifierParameters(
         fingerStickiness, thumbStickiness, maxCurl, minCurl, fingerRadius,
         thumbRadius, grabCooldown, maxCurlVel, maxGrabDistance,
-        layerMask == 0 ? (interactionHand.interactionManager.interactionLayer.layerMask
-                          | interactionHand.interactionManager.interactionNoContactLayer.layerMask) : layerMask,
+        layerMask == 0 ? (interactionHand.manager.interactionLayer.layerMask
+                          | interactionHand.manager.interactionNoContactLayer.layerMask) : layerMask,
         queryTriggers);
 
       for (int i = 0; i < _collidingCandidates.Length; i++) {
@@ -62,15 +62,16 @@ namespace Leap.Unity.Interaction.Internal {
 
     public void FixedUpdateClassifierHandState() {
       using (new ProfilerSample("Update Classifier Hand State")) {
-        var hand = interactionHand.GetLastTrackedLeapHand();
+        var hand = interactionHand.leapHand;
+
         if (interactionHand.isTracked) {
           // Ensure that all scale dependent variables are properly set.
           _scaledGrabParams.FINGERTIP_RADIUS = _defaultGrabParams.FINGERTIP_RADIUS
-                                             * interactionHand.interactionManager.SimulationScale;
+                                             * interactionHand.manager.SimulationScale;
           _scaledGrabParams.THUMBTIP_RADIUS = _defaultGrabParams.THUMBTIP_RADIUS
-                                            * interactionHand.interactionManager.SimulationScale;
+                                            * interactionHand.manager.SimulationScale;
           _scaledGrabParams.MAXIMUM_DISTANCE_FROM_HAND = _defaultGrabParams.MAXIMUM_DISTANCE_FROM_HAND
-                                                       * interactionHand.interactionManager.SimulationScale;
+                                                       * interactionHand.manager.SimulationScale;
       
           // Ensure that the temporally variant variables are updated.
           // scaledGrabParams.LAYER_MASK = 1 << _manager.InteractionLayer;
@@ -84,15 +85,16 @@ namespace Leap.Unity.Interaction.Internal {
     }
 
     public bool FixedUpdateClassifierGrasp(out IInteractionBehaviour graspedObject) {
-      using (new ProfilerSample("Update Grab Classifier - Grasp", interactionHand.interactionManager)) {
+      using (new ProfilerSample("Update Grab Classifier - Grasp", interactionHand.manager)) {
         graspedObject = null;
-        if (interactionHand.isGraspingObject || interactionHand.GetLeapHand() == null) {
-          // Cannot grasp another object with an untracked hand or while the hand is already grasping an object.
+        if (interactionHand.isGraspingObject || !interactionHand.isTracked) {
+          // Cannot grasp another object with an untracked hand or while the hand is
+          // already grasping an object or if the hand is not tracked.
           return false;
         }
 
         foreach (var interactionObj in interactionHand.graspCandidates) {
-          if (UpdateBehaviour(interactionObj, interactionHand.GetLastTrackedLeapHand(), graspMode: GraspUpdateMode.BeginGrasp)) {
+          if (UpdateBehaviour(interactionObj, interactionHand.leapHand, graspMode: GraspUpdateMode.BeginGrasp)) {
             graspedObject = interactionObj;
             return true;
           }
@@ -103,14 +105,14 @@ namespace Leap.Unity.Interaction.Internal {
     }
 
     public bool FixedUpdateClassifierRelease(out IInteractionBehaviour releasedObject) {
-      using (new ProfilerSample("Update Grab Classifier - Release", interactionHand.interactionManager)) {
+      using (new ProfilerSample("Update Grab Classifier - Release", interactionHand.manager)) {
         releasedObject = null;
         if (!interactionHand.isGraspingObject) {
           // Can't release an object if the hand is already not grasping one.
           return false;
         }
 
-        if (UpdateBehaviour(interactionHand.graspedObject, interactionHand.GetLastTrackedLeapHand(), graspMode: GraspUpdateMode.ReleaseGrasp)) {
+        if (UpdateBehaviour(interactionHand.graspedObject, interactionHand.leapHand, graspMode: GraspUpdateMode.ReleaseGrasp)) {
           releasedObject = interactionHand.graspedObject;
           return true;
         }
@@ -198,7 +200,7 @@ namespace Leap.Unity.Interaction.Internal {
       classifier.handChirality = hand.IsLeft;
       classifier.handDirection = hand.Direction.ToVector3();
       classifier.handXBasis = hand.Basis.xBasis.ToVector3();
-      float simScale = interactionHand.interactionManager.SimulationScale;
+      float simScale = interactionHand.manager.SimulationScale;
       classifier.handGrabCenter = (hand.PalmPosition
                                    + (hand.Direction * 0.05f * simScale)
                                    + (hand.PalmNormal * 0.01f * simScale)).ToVector3();
