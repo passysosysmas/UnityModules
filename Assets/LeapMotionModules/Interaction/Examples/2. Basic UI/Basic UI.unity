@@ -1360,6 +1360,10 @@ Prefab:
       propertyPath: manager
       value: 
       objectReference: {fileID: 708822598}
+    - target: {fileID: 1180994678239160, guid: 9361ab6d13ee87644bc370bccb524144, type: 2}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 9361ab6d13ee87644bc370bccb524144, type: 2}
   m_IsPrefabParent: 0
@@ -1750,11 +1754,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   interactionManager: {fileID: 708822598}
-  prioritizeControllers: 1
-  LeftHandControllers:
+  leftHandControllers:
   - {fileID: 1120977480}
   - {fileID: 265548107}
-  RightHandControllers:
+  rightHandControllers:
   - {fileID: 218407822}
   - {fileID: 833115646}
   OnLeftHandActive:
@@ -3222,6 +3225,10 @@ Prefab:
       propertyPath: manager
       value: 
       objectReference: {fileID: 708822598}
+    - target: {fileID: 1135166102121244, guid: 40e809833d307ef4983e1e71fe56e23b, type: 2}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 40e809833d307ef4983e1e71fe56e23b, type: 2}
   m_IsPrefabParent: 0
