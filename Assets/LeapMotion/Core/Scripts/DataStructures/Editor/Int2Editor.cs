@@ -1,4 +1,4 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
@@ -8,33 +8,30 @@ namespace Leap.Unity {
   [CustomPropertyDrawer(typeof(Int2))]
   public class Int2Editor : PropertyDrawer {
 
-    private static int[] _array = new int[2];
-    private static GUIContent[] _contents = new GUIContent[2] {
-      new GUIContent("X"),
-      new GUIContent("Y")
-    };
+    private Vector2 _value;
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
-      SerializedProperty xProp = property.FindPropertyRelative("x");
-      SerializedProperty yProp = property.FindPropertyRelative("y");
+      var xProp = property.FindPropertyRelative("x");
+      var yProp = property.FindPropertyRelative("y");
 
-      EditorGUI.LabelField(position, label);
+      _value.x = xProp.intValue;
+      _value.y = yProp.intValue;
+      var newValue = EditorGUI.Vector2Field(position, label, _value);
 
-      position.x += EditorGUIUtility.labelWidth;
-      position.width -= EditorGUIUtility.labelWidth;
+      if (newValue.x > _value.x) {
+        _value.x = Mathf.CeilToInt(newValue.x);
+      } else if (newValue.x < _value.x) {
+        _value.x = Mathf.FloorToInt(newValue.x);
+      }
 
-      Rect left = position;
-      left.width /= 2;
-      Rect right = left;
-      right.x += right.width;
+      if (newValue.y > _value.y) {
+        _value.y = Mathf.CeilToInt(newValue.y);
+      } else if (newValue.y < _value.y) {
+        _value.y = Mathf.FloorToInt(newValue.y);
+      }
 
-      float originalLabelWidth = EditorGUIUtility.labelWidth;
-      EditorGUIUtility.labelWidth = 13;
-
-      xProp.intValue = EditorGUI.IntField(left, "X", xProp.intValue);
-      yProp.intValue = EditorGUI.IntField(right, "Y", yProp.intValue);
-
-      EditorGUIUtility.labelWidth = originalLabelWidth;
+      xProp.intValue = Mathf.RoundToInt(_value.x);
+      yProp.intValue = Mathf.RoundToInt(_value.y);
     }
   }
 }

@@ -5,9 +5,9 @@ using Leap.Unity;
 using Leap.Unity.Attributes;
 
 public class asdadasdasdasd : MonoBehaviour {
-
-  [MinValue(0)]
-  public Int2 t;
+  
+  public Int2 int2MyMan;
+  public Vector2 helloWorld;
 
 
 
