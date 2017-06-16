@@ -12,7 +12,7 @@ If you aren't familiar with this practice, check out the [GitHub guide on forkin
 
 ## Code style
 
-The general rule is to follow the style you observe in the document you're editing. If you're adding something new (like a large chunk of code that doesn't have an obvious existing style, or a new codefile entirely), take a quick glance at our [style guide][styleguide]. You might observe some older code that doesn't follow the current style guide (pardon our dust, we'll get to it) -- better to follow the existing style than have conflicting styles in the same document. Thanks!!
+The general rule is to follow the style you observe in the document you're editing. If you're adding something new (like a large chunk of code that doesn't have an obvious existing style, or a new codefile entirely), take a quick glance at our [style guide][style-guide]. You might observe some older code that doesn't follow the current style guide (pardon our dust, we'll get to it) -- better to follow the existing style than have conflicting styles in the same document. Thanks!!
 
 [forking]: https://guides.github.com/activities/forking/
 [style-guide]: https://github.com/leapmotion/UnityModules/wiki/LM-Applications-Team-Style-Guide
