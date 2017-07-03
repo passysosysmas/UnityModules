@@ -830,6 +830,7 @@ namespace Leap.Unity.Interaction {
       foreach (var collider in _interactionColliders) {
         if (!hasColliders) hasColliders = true;
 
+#if UNITY_5_6
         // Custom, slower ClosestPoint
         if (collider is MeshCollider) {
           // Native, faster ClosestPoint, but no support for off-center colliders; use to
@@ -841,13 +842,16 @@ namespace Leap.Unity.Interaction {
                           - worldPosition).magnitude;
         }
         else {
-          // Note: Should be using rigidbody position instead of transform; this will
-          // cause problems when colliders are moving very fast (one-frame delay).
-          testDistance = (collider.transform.TransformPoint(
+#endif
+        // Note: Should be using rigidbody position instead of transform; this will
+        // cause problems when colliders are moving very fast (one-frame delay).
+        testDistance = (collider.transform.TransformPoint(
                             collider.ClosestPointOnSurface(
                               collider.transform.InverseTransformPoint(worldPosition)))
                           - worldPosition).magnitude;
+#if UNITY_5_6
         }
+#endif
 
         if (testDistance < closestComparativeColliderDistance) {
           closestComparativeColliderDistance = testDistance;
