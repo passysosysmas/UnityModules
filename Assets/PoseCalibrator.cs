@@ -9,22 +9,16 @@ using Leap.Unity.RuntimeGizmos;
 public class PoseCalibrator : MonoBehaviour, IRuntimeGizmoComponent {
   public LeapServiceProvider provider;
 
-  bool capturingData = false;
+  private bool _capturingData = false;
 
-  List<Vector3> oculusPoints = new List<Vector3>();
-  List<Vector3> leapPoints = new List<Vector3>();
-  KabschSolver kabsch = new KabschSolver();
+  private List<Vector3> _oculusPoints = new List<Vector3>();
+  private List<Vector3> _leapPoints = new List<Vector3>();
+  private KabschSolver _kabsch = new KabschSolver();
 
-  Vector3 lastOculusPos;
-
-  // Use this for initialization
-  void Start() {
-
-  }
-
-  // Update is called once per frame
+  private Vector3 _lastOculusPos;
+  
   void Update() {
-    if (capturingData && Hands.Right != null) {
+    if (_capturingData && Hands.Right != null) {
       provider.transform.rotation = transform.rotation * Quaternion.Euler(-90f, 180f, 0f);
       provider.transform.position = Vector3.zero;
       provider.ReTransformFrames();
@@ -32,20 +26,20 @@ public class PoseCalibrator : MonoBehaviour, IRuntimeGizmoComponent {
       provider.ReTransformFrames();
 
 
-      if (Vector3.Distance(transform.position, lastOculusPos) > 0.03f && Hands.Right != null) {
-        oculusPoints.Add(transform.position);
-        leapPoints.Add(provider.transform.position);
+      if (Vector3.Distance(transform.position, _lastOculusPos) > 0.03f && Hands.Right != null) {
+        _oculusPoints.Add(transform.position);
+        _leapPoints.Add(provider.transform.position);
 
-        lastOculusPos = transform.position;
+        _lastOculusPos = transform.position;
       }
     }
 
 
     if (Input.GetKeyDown(KeyCode.Space) && Hands.Right != null) {
-      capturingData = !capturingData;
+      _capturingData = !_capturingData;
 
 
-      if (capturingData) {
+      if (_capturingData) {
         transform.parent.rotation = Quaternion.Inverse(transform.rotation) * transform.parent.rotation;
 
         provider.transform.rotation = transform.rotation * Quaternion.Euler(-90f, 180f, 0f);
@@ -55,23 +49,30 @@ public class PoseCalibrator : MonoBehaviour, IRuntimeGizmoComponent {
         transform.parent.position += -transform.position - Hands.Right.PalmPosition.ToVector3();
       } else {
         //DO POSE ALIGNMENT
-        Matrix4x4 kabschTransform = kabsch.SolveKabsch(leapPoints, oculusPoints);
+        Matrix4x4 kabschTransform = _kabsch.SolveKabsch(_leapPoints, _oculusPoints);
 
         //Translate leap points to match oculus points so it can be seen
-        for(int i = 0; i< leapPoints.Count; i++) {
-          leapPoints[i] = kabschTransform * leapPoints[i];
+        for (int i = 0; i< _leapPoints.Count; i++) {
+          _leapPoints[i] = kabschTransform * _leapPoints[i];
         }
       }
     }
   }
 
   public void OnDrawRuntimeGizmos(RuntimeGizmoDrawer drawer) {
-    for (int i = 0; i < oculusPoints.Count; i++) {
-      drawer.DrawLine(oculusPoints[i], leapPoints[i]);
-      drawer.color = Color.gray;
-      drawer.DrawSphere(oculusPoints[i], 0.005f);
-      drawer.color = Color.green;
-      drawer.DrawSphere(leapPoints[i], 0.005f);
+
+    // Draw oculus points and lines to the leap points.
+    drawer.color = Color.gray;
+    for (int i = 0; i < _oculusPoints.Count; i++) {
+      drawer.DrawSphere(_oculusPoints[i], 0.005f);
+
+      drawer.DrawLine(_oculusPoints[i], _leapPoints[i]);
+    }
+
+    // Draw leap points.
+    drawer.color = Color.green;
+    for (int i = 0; i < _oculusPoints.Count; i++) {
+      drawer.DrawSphere(_leapPoints[i], 0.005f);
     }
   }
 }
