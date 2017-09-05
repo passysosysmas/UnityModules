@@ -27,7 +27,8 @@ namespace Leap.Unity.Recording {
         var input = inputPlayable.GetBehaviour();
 
         if (inputWeight > 0 && input.recording != null) {
-          if (input.recording.Sample((float)inputPlayable.GetTime(), _frame, clampTimeToValid: true)) {
+          double percent = input.recording.length * inputPlayable.GetTime() / inputPlayable.GetDuration();
+          if (input.recording.Sample((float)percent, _frame, clampTimeToValid: true)) {
             provider.SetCurrentFrame(_frame);
             break;
           }
