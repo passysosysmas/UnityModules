@@ -9,9 +9,8 @@
 
 using Leap.Unity;
 using Leap.Unity.Interaction;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using Leap.Unity.GraphicalRenderer;
 
 /// <summary>
 /// This simple script changes the color of an InteractionBehaviour as
@@ -38,24 +37,18 @@ public class SimpleInteractionGlow : MonoBehaviour {
   [Tooltip("This color only applies if the object is an InteractionButton or InteractionSlider.")]
   public Color pressedColor = Color.white;
 
-  private Material _material;
+  private LeapRuntimeTintData _tint;
 
   private InteractionBehaviour _intObj;
 
   void Start() {
     _intObj = GetComponent<InteractionBehaviour>();
 
-    Renderer renderer = GetComponent<Renderer>();
-    if (renderer == null) {
-      renderer = GetComponentInChildren<Renderer>();
-    }
-    if (renderer != null) {
-      _material = renderer.material;
-    }
+    _tint = GetComponentInChildren<LeapGraphic>().GetFeatureData<LeapRuntimeTintData>();
   }
 
   void Update() {
-    if (_material != null) {
+    if (_tint != null) {
 
       // The target color for the Interaction object will be determined by various simple state checks.
       Color targetColor = defaultColor;
@@ -65,8 +58,7 @@ public class SimpleInteractionGlow : MonoBehaviour {
       // than any other interaction object.
       if (_intObj.isPrimaryHovered && usePrimaryHover) {
         targetColor = primaryHoverColor;
-      }
-      else {
+      } else {
         // Of course, any number of objects can be hovered by any number of InteractionHands.
         // InteractionBehaviour provides an API for accessing various interaction-related
         // state information such as the closest hand that is hovering nearby, if the object
@@ -92,7 +84,7 @@ public class SimpleInteractionGlow : MonoBehaviour {
       }
 
       // Lerp actual material color to the target color.
-      _material.color = Color.Lerp(_material.color, targetColor, 30F * Time.deltaTime);
+      _tint.color = Color.Lerp(_tint.color, targetColor, 30F * Time.deltaTime);
     }
   }
 
