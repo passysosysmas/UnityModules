@@ -28,6 +28,20 @@ namespace Leap.Unity.Query {
       return array;
     }
 
+    public static T[] Fill<T>(this T[] array, int offset, int count, T value) {
+      for (int i = 0; i < count; i++) {
+        array[offset + i] = value;
+      }
+      return array;
+    }
+
+    public static T[] Fill<T>(this T[] array, int offset, int count, Func<T> constructor) {
+      for (int i = 0; i < count; i++) {
+        array[offset + i] = constructor();
+      }
+      return array;
+    }
+
     public static T[,] Fill<T>(this T[,] array, T value) {
       for (int i = 0; i < array.GetLength(0); i++) {
         for (int j = 0; j < array.GetLength(1); j++) {
