@@ -20,10 +20,6 @@ namespace Leap.Unity.GraphicalRenderer {
 
     private Matrix4x4[] _matrices = new Matrix4x4[1023];
 
-    //## Rect Space
-    private const string RECT_POSITIONS = LeapGraphicRenderer.PROPERTY_PREFIX + "Rect_GraphicPositions";
-    private List<Vector4> _rect_graphicPositions = new List<Vector4>();
-
     //## Cylindrical/Spherical spaces
     private const string CURVED_PARAMETERS = LeapGraphicRenderer.PROPERTY_PREFIX + "Curved_GraphicParameters";
     private List<Vector4> _curved_graphicParameters = new List<Vector4>();
@@ -53,15 +49,30 @@ namespace Leap.Unity.GraphicalRenderer {
 
           if (renderer.space == null) {
             using (new ProfilerSample("Build Space Data")) {
-              _rect_graphicPositions.Clear();
               for (int j = 0; j < meshGroup.graphics.Count; j++) {
-                var localSpace = renderer.transform.InverseTransformPoint(group.graphics[meshGroup.graphics[j]].transform.position);
-                _rect_graphicPositions.Add(localSpace);
+                _matrices[j] = group.graphics[meshGroup.graphics[j]].transform.localToWorldMatrix;
               }
-              meshGroup.block.SetVectorArray(RECT_POSITIONS, _rect_graphicPositions);
             }
           } else if (renderer.space is LeapRadialSpace) {
-            //TODO
+            using (new ProfilerSample("Build Space Data")) {
+              var radialSpace = renderer.space as LeapRadialSpace;
+
+              _curved_graphicParameters.Clear();
+              for (int j = 0; j < meshGroup.graphics.Count; j++) {
+                var graphic = group.graphics[meshGroup.graphics[j]];
+
+                _matrices[j] =
+                Matrix4x4.Translate(-renderer.transform.InverseTransformPoint(graphic.transform.position)) *
+                  renderer.transform.worldToLocalMatrix *
+                  graphic.transform.localToWorldMatrix;
+
+                var t = graphic.anchor.transformer as IRadialTransformer;
+                _curved_graphicParameters.Add(t.GetVectorRepresentation(graphic.transform));
+              }
+              meshGroup.block.SetFloat(SpaceProperties.RADIAL_SPACE_RADIUS, radialSpace.radius);
+              meshGroup.block.SetMatrix("_GraphicRenderer_LocalToWorld", renderer.transform.localToWorldMatrix);
+              meshGroup.block.SetVectorArray(CURVED_PARAMETERS, _curved_graphicParameters);
+            }
           }
 
           Graphics.DrawMeshInstanced(meshGroup.mesh, 0, _material, _matrices, meshGroup.graphics.Count, meshGroup.block);
@@ -93,8 +104,6 @@ namespace Leap.Unity.GraphicalRenderer {
         meshGroup.graphics.Add(i);
         _meshGroups.list[index] = meshGroup;
       }
-
-      OnUpdateRenderer();
     }
 
     private struct MeshGroup {

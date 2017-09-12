@@ -108,6 +108,65 @@ NavMeshSettings:
     tileSize: 256
     accuratePlacement: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &146337697
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  serializedVersion: 5
+  m_Component:
+  - component: {fileID: 146337699}
+  - component: {fileID: 146337698}
+  m_Layer: 0
+  m_Name: GameObject (2)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &146337698
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 146337697}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8fb726b2ea51dd94d8601fa443872ec2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _anchor: {fileID: 2017934698}
+  _featureData:
+    _table: []
+    _a: []
+    _b: []
+    _c: []
+    _d: []
+    _e: []
+    _f: []
+    _g: []
+    _h: []
+  _attachedRenderer: {fileID: 2017934699}
+  _attachedGroupIndex: 0
+  _favoriteGroupName: Baked
+  _preferredRendererType:
+    _fullName: Leap.Unity.GraphicalRenderer.LeapInstancedRenderer
+  vertexColor: {r: 1, g: 1, b: 1, a: 1}
+  _mesh: {fileID: 4300000, guid: aa76fee58d608da4a93922fc282beeff, type: 3}
+  _remappableChannels: -1
+--- !u!4 &146337699
+Transform:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 146337697}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.3, y: 1.9, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 2017934700}
+  m_RootOrder: 2
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &176069012
 GameObject:
   m_ObjectHideFlags: 0
@@ -227,11 +286,11 @@ MonoBehaviour:
     _h: []
   _attachedRenderer: {fileID: 2017934699}
   _attachedGroupIndex: 0
-  _favoriteGroupName: Instanced
+  _favoriteGroupName: Baked
   _preferredRendererType:
     _fullName: Leap.Unity.GraphicalRenderer.LeapInstancedRenderer
   vertexColor: {r: 1, g: 1, b: 1, a: 1}
-  _mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  _mesh: {fileID: 4300000, guid: aa76fee58d608da4a93922fc282beeff, type: 3}
   _remappableChannels: -1
 --- !u!4 &498998544
 Transform:
@@ -245,6 +304,315 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2017934700}
   m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &825408595
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  serializedVersion: 5
+  m_Component:
+  - component: {fileID: 825408597}
+  - component: {fileID: 825408596}
+  m_Layer: 0
+  m_Name: GameObject (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &825408596
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 825408595}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8fb726b2ea51dd94d8601fa443872ec2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _anchor: {fileID: 2017934698}
+  _featureData:
+    _table: []
+    _a: []
+    _b: []
+    _c: []
+    _d: []
+    _e: []
+    _f: []
+    _g: []
+    _h: []
+  _attachedRenderer: {fileID: 2017934699}
+  _attachedGroupIndex: 0
+  _favoriteGroupName: Baked
+  _preferredRendererType:
+    _fullName: Leap.Unity.GraphicalRenderer.LeapInstancedRenderer
+  vertexColor: {r: 1, g: 1, b: 1, a: 1}
+  _mesh: {fileID: 4300000, guid: aa76fee58d608da4a93922fc282beeff, type: 3}
+  _remappableChannels: -1
+--- !u!4 &825408597
+Transform:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 825408595}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -1.2, y: 0.9, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 2017934700}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &995921518
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  serializedVersion: 5
+  m_Component:
+  - component: {fileID: 995921520}
+  - component: {fileID: 995921519}
+  m_Layer: 0
+  m_Name: GameObject (4)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &995921519
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 995921518}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8fb726b2ea51dd94d8601fa443872ec2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _anchor: {fileID: 2017934698}
+  _featureData:
+    _table: []
+    _a: []
+    _b: []
+    _c: []
+    _d: []
+    _e: []
+    _f: []
+    _g: []
+    _h: []
+  _attachedRenderer: {fileID: 2017934699}
+  _attachedGroupIndex: 0
+  _favoriteGroupName: Baked
+  _preferredRendererType:
+    _fullName: Leap.Unity.GraphicalRenderer.LeapInstancedRenderer
+  vertexColor: {r: 1, g: 1, b: 1, a: 1}
+  _mesh: {fileID: 4300000, guid: aa76fee58d608da4a93922fc282beeff, type: 3}
+  _remappableChannels: -1
+--- !u!4 &995921520
+Transform:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 995921518}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 2, y: 1.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 2017934700}
+  m_RootOrder: 4
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1429333954
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  serializedVersion: 5
+  m_Component:
+  - component: {fileID: 1429333956}
+  - component: {fileID: 1429333955}
+  - component: {fileID: 1429333957}
+  m_Layer: 0
+  m_Name: GameObject (3)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1429333955
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1429333954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8fb726b2ea51dd94d8601fa443872ec2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _anchor: {fileID: 1429333957}
+  _featureData:
+    _table: []
+    _a: []
+    _b: []
+    _c: []
+    _d: []
+    _e: []
+    _f: []
+    _g: []
+    _h: []
+  _attachedRenderer: {fileID: 2017934699}
+  _attachedGroupIndex: 0
+  _favoriteGroupName: Baked
+  _preferredRendererType:
+    _fullName: Leap.Unity.GraphicalRenderer.LeapInstancedRenderer
+  vertexColor: {r: 1, g: 1, b: 1, a: 1}
+  _mesh: {fileID: 4300000, guid: aa76fee58d608da4a93922fc282beeff, type: 3}
+  _remappableChannels: -1
+--- !u!4 &1429333956
+Transform:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1429333954}
+  m_LocalRotation: {x: 0.20159689, y: -0.7065013, z: -0.67635965, w: -0.05246286}
+  m_LocalPosition: {x: 2.2, y: -0.1, z: 5.82}
+  m_LocalScale: {x: 16.920929, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 2017934700}
+  m_RootOrder: 3
+  m_LocalEulerAnglesHint: {x: 257.648, y: 788.16296, z: 811.016}
+--- !u!114 &1429333957
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1429333954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b7dca36e8e5c88459b2626007befebc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  parent: {fileID: 2017934698}
+  space: {fileID: 2017934698}
+--- !u!1 &1442788982
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  serializedVersion: 5
+  m_Component:
+  - component: {fileID: 1442788984}
+  - component: {fileID: 1442788983}
+  m_Layer: 0
+  m_Name: GameObject (6)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1442788983
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1442788982}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8fb726b2ea51dd94d8601fa443872ec2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _anchor: {fileID: 2017934698}
+  _featureData:
+    _table: []
+    _a: []
+    _b: []
+    _c: []
+    _d: []
+    _e: []
+    _f: []
+    _g: []
+    _h: []
+  _attachedRenderer: {fileID: 2017934699}
+  _attachedGroupIndex: 0
+  _favoriteGroupName: Baked
+  _preferredRendererType:
+    _fullName: Leap.Unity.GraphicalRenderer.LeapInstancedRenderer
+  vertexColor: {r: 1, g: 1, b: 1, a: 1}
+  _mesh: {fileID: 4300000, guid: aa76fee58d608da4a93922fc282beeff, type: 3}
+  _remappableChannels: -1
+--- !u!4 &1442788984
+Transform:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1442788982}
+  m_LocalRotation: {x: 0.31780782, y: 0.48412833, z: 0.67961043, w: 0.450275}
+  m_LocalPosition: {x: 1.38, y: 3.39, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 2017934700}
+  m_RootOrder: 6
+  m_LocalEulerAnglesHint: {x: 338.171, y: 429.227, z: -622.21497}
+--- !u!1 &1740357892
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  serializedVersion: 5
+  m_Component:
+  - component: {fileID: 1740357894}
+  - component: {fileID: 1740357893}
+  m_Layer: 0
+  m_Name: GameObject (5)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1740357893
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1740357892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8fb726b2ea51dd94d8601fa443872ec2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _anchor: {fileID: 2017934698}
+  _featureData:
+    _table: []
+    _a: []
+    _b: []
+    _c: []
+    _d: []
+    _e: []
+    _f: []
+    _g: []
+    _h: []
+  _attachedRenderer: {fileID: 2017934699}
+  _attachedGroupIndex: 0
+  _favoriteGroupName: Baked
+  _preferredRendererType:
+    _fullName: Leap.Unity.GraphicalRenderer.LeapInstancedRenderer
+  vertexColor: {r: 1, g: 1, b: 1, a: 1}
+  _mesh: {fileID: 4300000, guid: aa76fee58d608da4a93922fc282beeff, type: 3}
+  _remappableChannels: -1
+--- !u!4 &1740357894
+Transform:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1740357892}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -3, y: 2.7, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 2017934700}
+  m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1842327161
 GameObject:
@@ -294,7 +662,7 @@ Camera:
   m_GameObject: {fileID: 1842327161}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 1
+  m_ClearFlags: 2
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
   m_NormalizedViewPortRect:
     serializedVersion: 2
@@ -314,7 +682,7 @@ Camera:
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
-  m_TargetEye: 3
+  m_TargetEye: 0
   m_HDR: 1
   m_AllowMSAA: 1
   m_ForceIntoRT: 0
@@ -365,7 +733,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   parent: {fileID: 2017934698}
   space: {fileID: 2017934698}
-  _radius: 1
+  _radius: 4.2
 --- !u!114 &2017934699
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -380,7 +748,7 @@ MonoBehaviour:
   _selectedGroup: 0
   _space: {fileID: 2017934698}
   _groups:
-  - _groupName: Instanced
+  - _groupName: Baked
     _renderingMethod:
       _index: 3
       _a: []
@@ -401,6 +769,12 @@ MonoBehaviour:
     _renderer: {fileID: 2017934699}
     _graphics:
     - {fileID: 498998543}
+    - {fileID: 825408596}
+    - {fileID: 146337698}
+    - {fileID: 1429333955}
+    - {fileID: 995921519}
+    - {fileID: 1740357893}
+    - {fileID: 1442788983}
     _supportInfo: []
     _addRemoveSupported: 1
 --- !u!4 &2017934700
@@ -414,6 +788,12 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 498998544}
+  - {fileID: 825408597}
+  - {fileID: 146337699}
+  - {fileID: 1429333956}
+  - {fileID: 995921520}
+  - {fileID: 1740357894}
+  - {fileID: 1442788984}
   m_Father: {fileID: 0}
   m_RootOrder: 2
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 296.783, y: -327.498, z: 691.115}
