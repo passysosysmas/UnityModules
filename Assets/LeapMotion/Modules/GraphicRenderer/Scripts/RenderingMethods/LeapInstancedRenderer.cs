@@ -7,11 +7,15 @@ using UnityEngine;
 
 namespace Leap.Unity.GraphicalRenderer {
 
+  [LeapGraphicTag("Instanced")]
+  [Serializable]
   public class LeapInstancedRenderer : LeapRenderingMethod<LeapMeshGraphicBase>,
     ISupportsAddRemove {
 
 
-    private ListMap<Mesh, MeshGroup> _meshGroups;
+    private ListMap<Mesh, MeshGroup> _meshGroups = new ListMap<Mesh, MeshGroup>();
+
+    [SerializeField]
     private Material _material;
 
     private Matrix4x4[] _matrices = new Matrix4x4[1023];
@@ -57,19 +61,7 @@ namespace Leap.Unity.GraphicalRenderer {
               meshGroup.block.SetVectorArray(RECT_POSITIONS, _rect_graphicPositions);
             }
           } else if (renderer.space is LeapRadialSpace) {
-            var radialSpace = renderer.space as LeapRadialSpace;
-
-            using (new ProfilerSample("Build Space Data")) {
-              _curved_graphicParameters.Clear();
-              for (int j = 0; j < meshGroup.graphics.Count; j++) {
-                var graphic = group.graphics[meshGroup.graphics[j]];
-                var t = graphic.anchor.transformer as IRadialTransformer;
-                _curved_graphicParameters.Add(t.GetVectorRepresentation(graphic.transform));
-              }
-
-              meshGroup.block.SetFloat(SpaceProperties.RADIAL_SPACE_RADIUS, radialSpace.radius);
-              meshGroup.block.SetVectorArray(CURVED_PARAMETERS, _curved_graphicParameters);
-            }
+            //TODO
           }
 
           Graphics.DrawMeshInstanced(meshGroup.mesh, 0, _material, _matrices, meshGroup.graphics.Count, meshGroup.block);

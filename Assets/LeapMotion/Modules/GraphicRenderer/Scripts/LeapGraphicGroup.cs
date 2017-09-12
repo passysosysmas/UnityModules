@@ -596,7 +596,8 @@ namespace Leap.Unity.GraphicalRenderer {
     [Serializable]
     public class RenderingMethodReference : MultiTypedReference<LeapRenderingMethod, LeapBakedRenderer,
                                                                                      LeapDynamicRenderer,
-                                                                                     LeapTextRenderer> { }
+                                                                                     LeapTextRenderer,
+                                                                                     LeapInstancedRenderer> { }
     #endregion
   }
 }
