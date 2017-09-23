@@ -1,14 +1,15 @@
-﻿using UnityEngine;
-using UnityEngine.VR;
+﻿using System;
+using UnityEngine;
+using UnityEngine.UI;
 using Leap.Unity;
 using Leap;
 using Leap.Unity.RuntimeGizmos;
 
 public class CameraPositionOverride : MonoBehaviour, IRuntimeGizmoComponent {
   public LeapServiceProvider LeapProvider;
+  public Text latencyText;
   public int ExtrapolationAmount = 0;
   public int BounceAmount = 0;
-  public GameObject cubes;
   [Range(0.005f, 0.08f)]
   public float adjustment = 0.045f;
   public bool shouldInterpolate = true;
@@ -49,11 +50,9 @@ public class CameraPositionOverride : MonoBehaviour, IRuntimeGizmoComponent {
       transform.rotation = rawRotation;
     }
 
-
     if (Input.GetKeyDown(KeyCode.Space)) {
       shouldOverride = !shouldOverride;
       warping.autoUpdateHistory = !shouldOverride;
-      //cubes.SetActive(shouldOverride);
     }
 
     if (Input.GetKeyDown(KeyCode.R)) {
@@ -72,6 +71,17 @@ public class CameraPositionOverride : MonoBehaviour, IRuntimeGizmoComponent {
     }
     if (Input.GetKeyDown(KeyCode.V)) {
       drawTrajectory = !drawTrajectory;
+    }
+
+    if (Input.GetKey(KeyCode.RightArrow)) {
+      adjustment += 0.0001f;
+      adjustment = Mathf.Clamp(adjustment, 0.005f, 0.08f);
+      latencyText.text = "Latency Compensation Amount: " + String.Format("{0:0.0}", adjustment *1000f) + "ms";
+    }
+    if (Input.GetKey(KeyCode.LeftArrow)) {
+      adjustment -= 0.0001f;
+      adjustment = Mathf.Clamp(adjustment, 0.005f, 0.08f);
+      latencyText.text = "Latency Compensation Amount: " + String.Format("{0:0.0}", adjustment * 1000f) + "ms";
     }
   }
 
