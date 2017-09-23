@@ -1,0 +1,153 @@
+﻿using UnityEngine;
+using UnityEngine.VR;
+using Leap.Unity;
+using Leap;
+using Leap.Unity.RuntimeGizmos;
+
+public class CameraPositionOverride : MonoBehaviour, IRuntimeGizmoComponent {
+  public LeapServiceProvider LeapProvider;
+  public int ExtrapolationAmount = 0;
+  public int BounceAmount = 0;
+  public GameObject cubes;
+  [Range(0.005f, 0.08f)]
+  public float adjustment = 0.045f;
+  public bool shouldInterpolate = true;
+
+  protected Frame _odometryFrame = new Frame();
+  protected LeapVRTemporalWarping warping;
+  protected SmoothedFloat _smoothedUpdateToPrecullLatency = new SmoothedFloat();
+
+  [HideInInspector]
+  public Vector3 rawPosition;
+  [HideInInspector]
+  public Quaternion rawRotation;
+  private Vector3 positionalDrift = Vector3.zero;
+
+  private TimeDelay delay1 = new TimeDelay();
+  private bool useOculus = true;
+  private bool drawTrajectory = false;
+
+  public RingBuffer<Vector3> positions = new RingBuffer<Vector3>(500);
+  public RingBuffer<Quaternion> rotations = new RingBuffer<Quaternion>(500);
+  int stationaryOffset = 0;
+
+  void OnEnable() {
+    LeapVRCameraControl.OnPreCullEvent += onPreCull;
+    _smoothedUpdateToPrecullLatency.value = 1000;
+    _smoothedUpdateToPrecullLatency.SetBlend(0.99f, 0.0111f);
+    warping = GetComponentInChildren<LeapVRTemporalWarping>();
+  }
+
+  void OnDisable() {
+    LeapVRCameraControl.OnPreCullEvent -= onPreCull;
+  }
+
+  public bool shouldOverride = true;
+  void Update() {
+    if (shouldOverride) {
+      transform.position = rawPosition;
+      transform.rotation = rawRotation;
+    }
+
+
+    if (Input.GetKeyDown(KeyCode.Space)) {
+      shouldOverride = !shouldOverride;
+      warping.autoUpdateHistory = !shouldOverride;
+      //cubes.SetActive(shouldOverride);
+    }
+
+    if (Input.GetKeyDown(KeyCode.R)) {
+      positionalDrift = rawPosition + positionalDrift;
+    }
+
+    if (Input.GetKeyDown(KeyCode.E)) {
+      if (ExtrapolationAmount == 0) {
+        ExtrapolationAmount = 15;
+      } else {
+        ExtrapolationAmount = 0;
+      }
+    }
+    if (Input.GetKeyDown(KeyCode.O)) {
+      useOculus = !useOculus;
+    }
+    if (Input.GetKeyDown(KeyCode.V)) {
+      drawTrajectory = !drawTrajectory;
+    }
+  }
+
+  private void onPreCull(LeapVRCameraControl control) {
+    if (shouldOverride) {
+      _smoothedUpdateToPrecullLatency.value = Mathf.Min(_smoothedUpdateToPrecullLatency.value, 10000f);
+      _smoothedUpdateToPrecullLatency.Update((LeapProvider.GetLeapController().Now() - LeapProvider.leaptime), Time.deltaTime);
+
+      //LeapProvider.GetLeapController().Frame(_odometryFrame);
+      //LeapProvider.GetLeapController().GetInterpolatedFrameFromTime(_odometryFrame, LeapProvider.CalculateInterpolationTime() + (ExtrapolationAmount * 1000), LeapProvider.CalculateInterpolationTime() - (BounceAmount * 1000));
+      //LeapProvider.GetLeapController().GetInterpolatedFrame(_odometryFrame, LeapProvider.GetLeapController().Now());
+      //LeapProvider.GetLeapController().GetInterpolatedFrame(_odometryFrame, LeapProvider.GetLeapController().Now() - (long)_smoothedTrackingLatency.value);
+      if (shouldInterpolate) {
+        LeapProvider.GetLeapController().GetInterpolatedFrame(_odometryFrame, LeapProvider.CurrentFrame.Timestamp + (long)_smoothedUpdateToPrecullLatency.value); //This value is baaaasically 1000 all the time
+      } else {
+        LeapProvider.GetLeapController().Frame(_odometryFrame);
+      }
+
+      rawPosition = _odometryFrame.HeadPosition.ToVector3() / 1000f;
+      rawPosition = new Vector3(-rawPosition.x, -rawPosition.z, rawPosition.y);
+
+      rawRotation = Quaternion.LookRotation(Vector3.up, -Vector3.forward) *
+                            _odometryFrame.HeadOrientation.ToQuaternion() *
+ Quaternion.Inverse(Quaternion.LookRotation(Vector3.up, -Vector3.forward));
+
+      if (rawPosition == Vector3.zero) {
+        rawPosition = new Vector3(Mathf.Sin(Time.time), Mathf.Cos(Time.time), Mathf.Cos(Time.time*2f));
+        rawRotation = Quaternion.LookRotation(-rawPosition.normalized);
+      }
+
+      Quaternion OculusRotation = UnityEngine.XR.InputTracking.GetLocalRotation(UnityEngine.XR.XRNode.CenterEye);
+      Quaternion delayedOculusRotation1;
+      delay1.UpdateDelay(OculusRotation, Time.time, adjustment, out delayedOculusRotation1);
+
+      rawPosition += rawRotation * Vector3.back * 0.11f;
+      rawPosition -= positionalDrift;
+
+      Quaternion deltaRotation = Quaternion.Inverse(delayedOculusRotation1) * OculusRotation;
+      if (useOculus) {
+        rawRotation *= deltaRotation;
+      }
+
+      warping.ManuallyUpdateTemporalWarping(rawPosition, rawRotation);
+
+      control.SetCameraTransform(rawPosition, rawRotation);
+
+      positions.Add(rawPosition);
+      rotations.Add(rawRotation);
+
+      stationaryOffset--;
+      if (stationaryOffset == -1) {
+        stationaryOffset = 19;
+      }
+    }
+  }
+
+  public void OnDrawRuntimeGizmos(RuntimeGizmoDrawer drawer) {
+    if (drawTrajectory) {
+      for (int i = 0; i < positions.Length - 1; i++) {
+        drawer.DrawLine(positions.Get(i), positions.Get(i + 1));
+      }
+
+      drawer.color = Color.red;
+      for (int i = stationaryOffset; i < rotations.Length - 1; i += 20) {
+        drawer.DrawLine(positions.Get(i), positions.Get(i) + (rotations.Get(i + 1) * Vector3.right * 0.1f));
+      }
+
+      drawer.color = Color.green;
+      for (int i = stationaryOffset; i < rotations.Length - 1; i += 20) {
+        drawer.DrawLine(positions.Get(i), positions.Get(i) + (rotations.Get(i + 1) * Vector3.up * 0.1f));
+      }
+
+      drawer.color = Color.blue;
+      for (int i = stationaryOffset; i < rotations.Length - 1; i += 20) {
+        drawer.DrawLine(positions.Get(i), positions.Get(i) + (rotations.Get(i + 1) * Vector3.forward * 0.1f));
+      }
+    }
+  }
+}

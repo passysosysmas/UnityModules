@@ -128,6 +128,8 @@ namespace Leap.Unity {
     [SerializeField]
     private KeyCode _lessRewind = KeyCode.RightArrow;
 
+    public bool autoUpdateHistory = true;
+
     // Manual Device Offset
     private const float DEFAULT_DEVICE_OFFSET_Y_AXIS = 0f;
     private const float DEFAULT_DEVICE_OFFSET_Z_AXIS = 0.12f;
@@ -267,6 +269,20 @@ namespace Leap.Unity {
       }
     }
 
+    /// <summary>
+    /// Use this method when not using Unity default VR integration.  This method should be called directly after
+    /// the head transform has been updated using your input tracking solution.
+    /// </summary>
+    public void ManuallyUpdateTemporalWarping(Vector3 position, Quaternion rotation) {
+      if (_trackingAnchor == null) {
+        updateHistory(position, rotation);
+        updateTemporalWarping(position, rotation);
+      } else {
+        updateHistory(_trackingAnchor.InverseTransformPoint(position),
+                      Quaternion.Inverse(_trackingAnchor.rotation) * rotation);
+      }
+    }
+
     #endregion
 
     #region Unity Events
@@ -368,7 +384,7 @@ namespace Leap.Unity {
     private void onValidCameraParams(LeapVRCameraControl.CameraParams cameraParams) {
       _projectionMatrix = cameraParams.ProjectionMatrix;
 
-      if (UnityEngine.XR.XRSettings.enabled) {
+      if (UnityEngine.XR.XRSettings.enabled && autoUpdateHistory) {
         if (provider != null) {
           updateHistory(UnityEngine.XR.InputTracking.GetLocalPosition(UnityEngine.XR.XRNode.CenterEye),
                         UnityEngine.XR.InputTracking.GetLocalRotation(UnityEngine.XR.XRNode.CenterEye));

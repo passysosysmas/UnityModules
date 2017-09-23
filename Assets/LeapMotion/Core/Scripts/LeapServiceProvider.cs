@@ -78,6 +78,7 @@ namespace Leap.Unity {
 
     [NonSerialized]
     public long imageTimeStamp = 0;
+    public long leaptime;
 
     public override Frame CurrentFrame {
       get {
@@ -187,6 +188,7 @@ namespace Leap.Unity {
       }
 
       if (_useInterpolation) {
+        leaptime = leap_controller_.Now();
 #if !UNITY_ANDROID
         _smoothedTrackingLatency.value = Mathf.Min(_smoothedTrackingLatency.value, 30000f);
         _smoothedTrackingLatency.Update((float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), Time.deltaTime);

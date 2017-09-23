@@ -1,12 +1,3 @@
-/******************************************************************************
- * Copyright (C) Leap Motion, Inc. 2011-2017.                                 *
- * Leap Motion proprietary and  confidential.                                 *
- *                                                                            *
- * Use subject to the terms of the Leap Motion SDK Agreement available at     *
- * https://developer.leapmotion.com/sdk_agreement, or another agreement       *
- * between Leap Motion and you, your company or other organization.           *
- ******************************************************************************/
-
 using UnityEngine;
 using UnityEngine.Rendering;
 using System;
@@ -19,6 +10,8 @@ namespace Leap.Unity {
     public const string GLOBAL_EYE_UV_OFFSET_NAME = "_LeapGlobalStereoUVOffset";
     private static Vector2 LEFT_EYE_UV_OFFSET = new Vector2(0, 0);
     private static Vector2 RIGHT_EYE_UV_OFFSET = new Vector2(0, 0.5f);
+
+    public static event Action<LeapVRCameraControl> OnPreCullEvent;
 
     //When using VR, the cameras do not have valid parameters until the first frame begins rendering, 
     //so if you need valid parameters for initialization, you can use this callback to get notified 
@@ -48,7 +41,10 @@ namespace Leap.Unity {
     }
 
     private Matrix4x4 _finalCenterMatrix;
-    private LeapDeviceInfo _deviceInfo;
+    //private LeapDeviceInfo _deviceInfo;
+
+    private bool _isCenterMatrixOverriden = false;
+    private Matrix4x4 _overridenCenterMatrix = Matrix4x4.identity;
 
     void Start() {
 #if UNITY_EDITOR
@@ -57,7 +53,7 @@ namespace Leap.Unity {
       }
 #endif
 
-      _deviceInfo = LeapDeviceInfo.GetLeapDeviceInfo();
+      //_deviceInfo = new LeapDeviceInfo(LeapDeviceType.Peripheral);
     }
 
     void Update() {
@@ -79,8 +75,19 @@ namespace Leap.Unity {
       }
 #endif
 
+      _isCenterMatrixOverriden = false;
+      _overridenCenterMatrix = Matrix4x4.identity;
+
+      if (OnPreCullEvent != null) {
+        OnPreCullEvent(this);
+      }
+
       _camera.ResetWorldToCameraMatrix();
       _finalCenterMatrix = _camera.worldToCameraMatrix;
+
+      if (_isCenterMatrixOverriden) {
+        _camera.worldToCameraMatrix = _overridenCenterMatrix;
+      }
 
       if (!_hasDispatchedValidCameraParams) {
         CameraParams cameraParams = new CameraParams(_cachedCamera);
@@ -113,15 +120,27 @@ namespace Leap.Unity {
       Matrix4x4 offsetMatrix;
 
       if (_overrideEyePosition) {
-        offsetMatrix = _finalCenterMatrix;
-        Vector3 ipdOffset = (_eyeType.IsLeftEye ? 1 : -1) * transform.right * _deviceInfo.baseline * 0.5f;
-        Vector3 forwardOffset = -transform.forward * _deviceInfo.forwardOffset;
-        offsetMatrix *= Matrix4x4.TRS(ipdOffset + forwardOffset, Quaternion.identity, Vector3.one);
+        throw new NotImplementedException("Dont do that.");
+        //offsetMatrix = _finalCenterMatrix;
+        //Debug.Log(_deviceInfo.baseline);
+        //Vector3 ipdOffset = (_eyeType.IsLeftEye ? 1 : -1) * transform.right * _deviceInfo.baseline * 0.5f;
+        //Vector3 forwardOffset = -transform.forward * _deviceInfo.focalPlaneOffset;
+        //offsetMatrix *= Matrix4x4.TRS(ipdOffset + forwardOffset, Quaternion.identity, Vector3.one);
       } else {
-        offsetMatrix = _camera.worldToCameraMatrix;
+        if (_isCenterMatrixOverriden) {
+          Matrix4x4 eyeDelta = _camera.worldToCameraMatrix * _finalCenterMatrix.inverse;
+          offsetMatrix = eyeDelta * _overridenCenterMatrix;
+        } else {
+          offsetMatrix = _camera.worldToCameraMatrix;
+        }
       }
 
       _camera.worldToCameraMatrix = offsetMatrix;
+    }
+
+    public void SetCameraTransform(Vector3 position, Quaternion rotation) {
+      _overridenCenterMatrix = Matrix4x4.TRS(position, rotation, new Vector3(1, 1, -1)).inverse;
+      _isCenterMatrixOverriden = true;
     }
 
     public struct CameraParams {
