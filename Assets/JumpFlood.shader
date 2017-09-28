@@ -140,9 +140,9 @@
     //Calculate color based on inside/outside flag
     //w is non-zero if we are inside
     if (curr.w) {
-      color = float3(0.6, 0, 0);
+      color = 0.05 * float3(0, 0, 0.6) / dist;
     } else {
-      color = float3(0, 1, 0);
+      color = 0.1 * float3(0, 1, 0) / dist;
     }
 
     return float4(color, alpha);
