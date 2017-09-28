@@ -69,6 +69,9 @@
     float4 result;
     result.xy = float2(100, 100);
     result.z = ScreenDist(result.xy);
+    
+    //This line determines what is considered inside vs outside
+    //For this example, alpha is the determining factor
     result.w = color.a > 0.5 ? 1 : 0;
 
     //All pixels start out as pointing wayy too far out.
