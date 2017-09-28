@@ -54,9 +54,10 @@
     return o;
   }
 
-  float screenDist(float2 v) {
+  float ScreenDist(float2 v) {
     float ratio = _MainTex_TexelSize.x / _MainTex_TexelSize.y;
-    return dot(v, v * ratio);
+    v.x /= ratio;
+    return dot(v, v);
   }
 
   fixed4 frag_init(v2f i) : SV_Target{
@@ -65,7 +66,7 @@
     float4 result = 0;
     if (color.a < 0.5) {
       result.xy = float2(100, 100);
-      result.w = screenDist(result.xy);
+      result.w = ScreenDist(result.xy);
     }
 
     return result;
@@ -86,14 +87,14 @@
 
   fixed4 frag_jump(v2f_jump i) : SV_Target{
     float4 curr = tex2D(_MainTex, i.uv[0]);
-    float currDist = sqrMag(curr.xy);
+    float currDist = ScreenDist(curr.xy);
 
     for (uint j = 1; j <= 8; j++) {
       float2 n = tex2D(_MainTex, i.uv[j]).xy + (i.uv[j] - i.uv[0]);
 
       checkBounds(n, i.uv[j]);
 
-      float dist = screenDist(n.xy);
+      float dist = ScreenDist(n.xy);
 
       compDist(dist, n, currDist, curr.xy);
     }
