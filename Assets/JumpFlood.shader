@@ -63,19 +63,18 @@
   fixed4 frag_init(v2f i) : SV_Target{
     float4 color = tex2D(_MainTex, i.uv);
     
-    float4 result = 0;
-    if (color.a < 0.5) {
-      result.xy = float2(100, 100);
-      result.w = ScreenDist(result.xy);
-    }
+    float4 result;
+    result.xy = float2(100, 100);
+    result.z = ScreenDist(result.xy);
+    result.w = color.a > 0.5 ? 1 : 0;
 
     return result;
   }
 
-  void compDist(float dist, float2 xy, inout float currDist, inout float2 currXY) {
-    if (dist < currDist) {
-      currDist = dist;
-      currXY = xy;
+  void compDist(float dist, float2 xy, inout float4 curr) {
+    if (dist < curr.z) {
+      curr.xy = xy;
+      curr.z = dist;
     }
   }
 
@@ -85,27 +84,43 @@
     }
   }
 
+  void checkInsideOutside(inout float4 n, float4 curr) {
+    if (n.w != curr.w) {
+      n.xyz = float3(0, 0, 0);
+    }
+  }
+
   fixed4 frag_jump(v2f_jump i) : SV_Target{
     float4 curr = tex2D(_MainTex, i.uv[0]);
-    float currDist = ScreenDist(curr.xy);
 
     for (uint j = 1; j <= 8; j++) {
-      float2 n = tex2D(_MainTex, i.uv[j]).xy + (i.uv[j] - i.uv[0]);
+      float4 n = tex2D(_MainTex, i.uv[j]);
+      checkInsideOutside(n, curr);
 
-      checkBounds(n, i.uv[j]);
+      n.xy += i.uv[j] - i.uv[0];
+
+      checkBounds(n.xy, i.uv[j]);
 
       float dist = ScreenDist(n.xy);
 
-      compDist(dist, n, currDist, curr.xy);
+      compDist(dist, n, curr);
     }
 
-    return float4(curr.xy, currDist, 1);
+    return curr;
   }
 
   fixed4 frag_comp(v2f i) : SV_Target {
     float4 curr = tex2D(_MainTex, i.uv);
-    float dist = smoothstep(0.9, 1, sin(100 * sqrt(curr.z)));
-    return float4(0, dist, 0, 1);
+    float dist = smoothstep(0.8, 1, sin(140 * sqrt(curr.z)));
+
+    float3 color;
+    if (curr.w < 0.5) {
+      color = float3(0, 1, 0);
+    } else {
+      color = float3(0.6, 0, 0);
+    }
+
+    return float4(color, dist);
   }
   ENDCG
 
@@ -131,7 +146,7 @@
 
     //Pass 2: Composite
     Pass{
-      Blend One One
+      Blend SrcAlpha OneMinusSrcAlpha
       CGPROGRAM
       #pragma vertex vert
       #pragma fragment frag_comp
