@@ -631,7 +631,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   jumpFloodShader: {fileID: 4800000, guid: ad2a333a501d87843a3ab7d93bcd9aed, type: 3}
-  startStep: 512
+  steps: 10
 --- !u!81 &1114465260
 AudioListener:
   m_ObjectHideFlags: 0

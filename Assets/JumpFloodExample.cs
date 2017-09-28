@@ -9,14 +9,10 @@ public class JumpFloodExample : MonoBehaviour {
 
   public Shader jumpFloodShader;
 
-  [Range(1, 1024)]
-  public int startStep = 512;
+  [Range(1, 12)]
+  public int steps = 512;
 
   private Material _jumpFloodMat;
-
-  private void OnValidate() {
-    startStep = Mathf.ClosestPowerOfTwo(startStep);
-  }
 
   private void tryInitMaterial() {
     if (_jumpFloodMat != null) {
@@ -47,7 +43,7 @@ public class JumpFloodExample : MonoBehaviour {
 
     Graphics.Blit(source, tex0, _jumpFloodMat, PASS_INIT);
 
-    int step = startStep;
+    int step = Mathf.RoundToInt(Mathf.Pow(2, steps - 1));
     while (step != 0) {
       _jumpFloodMat.SetFloat("_Step", step);
       Graphics.Blit(tex0, tex1, _jumpFloodMat, PASS_JUMP);
