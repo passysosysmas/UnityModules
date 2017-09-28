@@ -41,11 +41,12 @@
 
     float2 dx = float2(_MainTex_TexelSize.x, 0) * _Step;
     float2 dy = float2(0, _MainTex_TexelSize.y) * _Step;
+
+    //Sample all pixels within a 3x3 block
     o.uv[1] = v.uv + dx;
     o.uv[2] = v.uv - dx;
     o.uv[3] = v.uv + dy;
     o.uv[4] = v.uv - dy;
-
     o.uv[5] = v.uv + dx + dy;
     o.uv[6] = v.uv + dx - dy;
     o.uv[7] = v.uv - dx + dy;
@@ -54,6 +55,8 @@
     return o;
   }
 
+  //Calculate screen space distance while compensating for
+  //non-square texture sizes
   float ScreenDist(float2 v) {
     float ratio = _MainTex_TexelSize.x / _MainTex_TexelSize.y;
     v.x /= ratio;
@@ -68,14 +71,11 @@
     result.z = ScreenDist(result.xy);
     result.w = color.a > 0.5 ? 1 : 0;
 
-    return result;
-  }
+    //All pixels start out as pointing wayy too far out.
+    //100 image units is very far.
+    //W flags whether or not we are inside or outside
 
-  void compDist(float dist, float2 xy, inout float4 curr) {
-    if (dist < curr.z) {
-      curr.xy = xy;
-      curr.z = dist;
-    }
+    return result;
   }
 
   void checkBounds(inout float2 xy, float2 uv) {
@@ -84,43 +84,65 @@
     }
   }
 
-  void checkInsideOutside(inout float4 n, float4 curr) {
-    if (n.w != curr.w) {
-      n.xyz = float3(0, 0, 0);
-    }
-  }
-
   fixed4 frag_jump(v2f_jump i) : SV_Target{
     float4 curr = tex2D(_MainTex, i.uv[0]);
 
     for (uint j = 1; j <= 8; j++) {
+      //Sample a neighbor pixel
       float4 n = tex2D(_MainTex, i.uv[j]);
-      checkInsideOutside(n, curr);
 
+      //If the neighbor sample is on the other side
+      //compared to us, treat it like there is zero
+      //distance to the surface
+      if (n.w != curr.w) {
+        n.xyz = float3(0, 0, 0);
+      }
+
+      //Calculate the delta vector from our curr point
+      //to the point the neighbor is pointing to
       n.xy += i.uv[j] - i.uv[0];
 
+      //If the neighbor is out of bounds, make it invalid
       checkBounds(n.xy, i.uv[j]);
 
+      //Calculate the screen space distance to the 
+      //neighbors point using this delta
       float dist = ScreenDist(n.xy);
 
-      compDist(dist, n, curr);
+      //If the screen space distance is less than our
+      //current min distance, update the current value
+      //to point to the new location with the new distance
+      if (dist < curr.z) {
+        curr.xyz = float3(n.xy, dist);
+      }
     }
 
     return curr;
   }
 
+  //This is just an example composite to visualize the distance
+  //field, it's not actually part of the algorithm
   fixed4 frag_comp(v2f i) : SV_Target {
     float4 curr = tex2D(_MainTex, i.uv);
-    float dist = smoothstep(0.8, 1, sin(140 * sqrt(curr.z)));
+
+    //Grab the signed distance out of the result
+    //Squared distance is stored in the z component
+    float dist = sqrt(curr.z);
+
+    //Calculate a nice stripe effect based on distance
+    float alpha = smoothstep(0.8, 1, sin(140 * dist));
 
     float3 color;
-    if (curr.w < 0.5) {
-      color = float3(0, 1, 0);
-    } else {
+
+    //Calculate color based on inside/outside flag
+    //w is non-zero if we are inside
+    if (curr.w) {
       color = float3(0.6, 0, 0);
+    } else {
+      color = float3(0, 1, 0);
     }
 
-    return float4(color, dist);
+    return float4(color, alpha);
   }
   ENDCG
 
