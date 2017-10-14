@@ -41,7 +41,7 @@
 			fixed4 frag (v2f i) : SV_Target
 			{
 				// sample the rectified texture
-				return length(tex2D(_LeapGlobalBrightnessTexture, LeapGetRightUndistortedUV(float4(i.uv.x, i.uv.y, 0.0, 1.0))));
+				return length(tex2D(_LeapGlobalBrightnessTexture, LeapGetLeftUndistortedUV(float4(i.uv.x, i.uv.y, 0.0, 1.0))));
 			}
 			ENDCG
 		}
