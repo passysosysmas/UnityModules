@@ -14,9 +14,39 @@ using UnityEditor;
 using System;
 using System.Collections;
 using Leap.Unity.Attributes;
-//using Leap.Unity.Graphing;
 
 namespace Leap.Unity {
+
+  /// <summary>
+  /// You can implement this interface whenever you want to use the
+  /// Leap Controller to access specific data.  
+  /// 
+  /// Since the controller can become available at unpredictable times 
+  /// that do not coincide with the normal Awake/Start/OnEnable lifecycle, 
+  /// this interface can provide an easier workflow for ensuring you 
+  /// always are connected to the controller when it is available.
+  /// 
+  /// You should use the SubscribeToController method on a ServiceProvider
+  /// whenever you want to subscribe to the controller, and UnsubscribeFromController
+  /// whenever you want to ubsubscrube from the controller.
+  /// </summary>
+  public interface IControllerSubscriber {
+
+    /// <summary>
+    /// Called as soon as the controller is available to be connected to
+    /// this subscriber.  This might be right away when SubscribeToController
+    /// is called.
+    /// </summary>
+    void OnConnectToController(Controller controller);
+
+    /// <summary>
+    /// Called as soon as the controller is no longer available to be
+    /// connected to this subscriber.  This might be right away when 
+    /// UnsubscribeFromController is called.
+    /// </summary>
+    void OnDisconnectFromController(Controller controller);
+  }
+
   /**LeapServiceProvider creates a Controller and supplies Leap Hands and images */
   public class LeapServiceProvider : LeapProvider {
     /** Conversion factor for nanoseconds to seconds. */
@@ -25,6 +55,46 @@ namespace Leap.Unity {
     protected const double S_TO_NS = 1e6;
     /** Transform Array for Precull Latching **/
     protected const string HAND_ARRAY = "_LeapHandTransforms";
+
+    /// <summary>
+    /// Called right after the controller for this subscriber is created.
+    /// </summary>
+    public Action<Controller> OnControllerCreated;
+
+    /// <summary>
+    /// Called right before the controller for this subscriber is destroyed.
+    /// </summary>
+    public Action<Controller> OnControllerDestroyed;
+
+    /// <summary>
+    /// Subscribe to the controller of this provider.  If the controller already
+    /// exists, the OnSubscribeToController callback is triggered right away.
+    /// OnConnectToController and OnDisconnectFromController will be called
+    /// every time the controller is created or destroyed.
+    /// </summary>
+    public void SubscribeToController(IControllerSubscriber subscriber) {
+      if (leap_controller_ != null) {
+        subscriber.OnConnectToController(leap_controller_);
+      }
+
+      OnControllerCreated += subscriber.OnConnectToController;
+      OnControllerDestroyed += subscriber.OnDisconnectFromController;
+    }
+
+    /// <summary>
+    /// Unsubscribe from the controller of this provider.  If the controller
+    /// still exists, OnUbsubscribeFromController is triggered right away.
+    /// The OnConnectToController and OnDisconnectFromController callbacks
+    /// will not be called until SubscribeToController is called again.
+    /// </summary>
+    public void UnsubscribeFromController(IControllerSubscriber subscriber) {
+      if (leap_controller_ != null) {
+        subscriber.OnDisconnectFromController(leap_controller_);
+      }
+
+      OnControllerCreated -= subscriber.OnConnectToController;
+      OnControllerDestroyed -= subscriber.OnDisconnectFromController;
+    }
 
     public enum FrameOptimizationMode {
       None,
@@ -361,6 +431,7 @@ namespace Leap.Unity {
         leap_controller_.ClearPolicy(Controller.PolicyFlag.POLICY_OPTIMIZE_HMD);
       }
     }
+
     /** Create an instance of a Controller, initialize its policy flags
      * and subscribe to connection event */
     protected void createController() {
@@ -374,12 +445,20 @@ namespace Leap.Unity {
       } else {
         leap_controller_.Device += onHandControllerConnect;
       }
+
+      if (OnControllerCreated != null) {
+        OnControllerCreated(leap_controller_);
+      }
     }
 
     /** Calling this method stop the connection for the existing instance of a Controller, 
      * clears old policy flags and resets to null */
     protected void destroyController() {
       if (leap_controller_ != null) {
+        if (OnControllerDestroyed != null) {
+          OnControllerCreated(leap_controller_);
+        }
+
         if (leap_controller_.IsConnected) {
           leap_controller_.ClearPolicy(Controller.PolicyFlag.POLICY_OPTIMIZE_HMD);
         }
