@@ -8,7 +8,7 @@
  ******************************************************************************/
 
 using UnityEngine;
-using UnityEngine.VR;
+using UnityEngine.XR;
 using System;
 using System.Linq;
 
@@ -37,9 +37,9 @@ public class VRHeightOffset : MonoBehaviour {
   }
 
   void Start() {
-    if (UnityEngine.XR.XRDevice.isPresent && UnityEngine.XR.XRSettings.enabled && _deviceOffsets != null) {
+    if (VRDevice.isPresent && VRSettings.enabled && _deviceOffsets != null) {
 #if UNITY_5_4_OR_NEWER
-      string deviceName = UnityEngine.XR.XRSettings.loadedDeviceName;
+      string deviceName = VRSettings.loadedDeviceName;
 #else
       string deviceName = VRDevice.family;
 #endif

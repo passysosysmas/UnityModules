@@ -8,7 +8,7 @@
  ******************************************************************************/
 
 using UnityEngine;
-using UnityEngine.VR;
+using UnityEngine.XR;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -355,8 +355,8 @@ namespace Leap.Unity {
         _shouldSetLocalPosition = false;
       }
 
-      if (Input.GetKeyDown(_recenter) && UnityEngine.XR.XRSettings.enabled && UnityEngine.XR.XRDevice.isPresent) {
-        UnityEngine.XR.InputTracking.Recenter();
+      if (Input.GetKeyDown(_recenter) && XRSettings.enabled && XRDevice.isPresent) {
+        InputTracking.Recenter();
       }
 
       // Manual Time Alignment
@@ -375,24 +375,24 @@ namespace Leap.Unity {
     protected void LateUpdate() {
       if (_forceCustomUpdate) {
         ManuallyUpdateTemporalWarping();
-      } else if (UnityEngine.XR.XRSettings.enabled) {
-        updateTemporalWarping(UnityEngine.XR.InputTracking.GetLocalPosition(UnityEngine.XR.XRNode.CenterEye),
-                              UnityEngine.XR.InputTracking.GetLocalRotation(UnityEngine.XR.XRNode.CenterEye));
+      } else if (XRSettings.enabled) {
+        updateTemporalWarping(InputTracking.GetLocalPosition(XRNode.CenterEye),
+                              InputTracking.GetLocalRotation(XRNode.CenterEye));
       }
     }
 
     private void onValidCameraParams(LeapVRCameraControl.CameraParams cameraParams) {
       _projectionMatrix = cameraParams.ProjectionMatrix;
 
-      if (UnityEngine.XR.XRSettings.enabled && autoUpdateHistory) {
+      if (XRSettings.enabled) {
         if (provider != null) {
-          updateHistory(UnityEngine.XR.InputTracking.GetLocalPosition(UnityEngine.XR.XRNode.CenterEye),
-                        UnityEngine.XR.InputTracking.GetLocalRotation(UnityEngine.XR.XRNode.CenterEye));
+          updateHistory(InputTracking.GetLocalPosition(XRNode.CenterEye),
+                        InputTracking.GetLocalRotation(XRNode.CenterEye));
         }
 
         if (_syncMode == SyncMode.LOW_LATENCY) {
-          updateTemporalWarping(UnityEngine.XR.InputTracking.GetLocalPosition(UnityEngine.XR.XRNode.CenterEye),
-                                UnityEngine.XR.InputTracking.GetLocalRotation(UnityEngine.XR.XRNode.CenterEye));
+          updateTemporalWarping(InputTracking.GetLocalPosition(XRNode.CenterEye),
+                                InputTracking.GetLocalRotation(XRNode.CenterEye));
         }
       }
     }
