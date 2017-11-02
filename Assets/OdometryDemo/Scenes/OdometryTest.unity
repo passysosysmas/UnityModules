@@ -6056,13 +6056,13 @@ MonoBehaviour:
   _tweenRotationalWarping: 0
   _tweenPositionalWarping: 0
   _syncMode: 1
-  _forceCustomUpdate: 0
+  _forceCustomUpdate: 1
   _allowManualTimeAlignment: 0
   _customWarpAdjustment: 17
   _unlockHold: 303
   _moreRewind: 276
   _lessRewind: 275
-  autoUpdateHistory: 1
+  autoUpdateHistory: 0
   _allowManualDeviceOffset: 0
   _deviceOffsetYAxis: 0
   _deviceOffsetZAxis: 0.12
@@ -17153,7 +17153,7 @@ RectTransform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1186718503}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 174.5, y: 136.5, z: 0}
+  m_LocalPosition: {x: 254.5, y: 136.5, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 2133808853}
@@ -25614,7 +25614,7 @@ RectTransform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 2133808852}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 48.199997, y: 129.9, z: 0}
+  m_LocalPosition: {x: -31.800003, y: 129.9, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 1186718507}
