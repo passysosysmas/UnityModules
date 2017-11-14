@@ -137,6 +137,11 @@ namespace Leap.Unity.Interaction {
     public bool isRight { get { return !isLeft; } }
 
     /// <summary>
+    /// Returns the current position of this controller.
+    /// </summary>
+    public abstract Vector3 position { get; }
+
+    /// <summary>
     /// Returns the current velocity of this controller.
     /// </summary>
     public abstract Vector3 velocity { get; }
@@ -943,6 +948,9 @@ namespace Leap.Unity.Interaction {
       // Clear contact data if we lose tracking.
       if (!isTracked && _contactBehaviours.Count > 0) {
         _contactBehaviours.Clear();
+
+        // Also clear soft contact state if tracking is lost.
+        _softContactCollisions.Clear();
       }
 
       // Disable contact bone parent if we lose tracking.
