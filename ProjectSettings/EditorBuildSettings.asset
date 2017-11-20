@@ -5,6 +5,15 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/OdometryDemo/Scenes/OdometryTest.unity
     guid: 8a4468c12919a2f4284c8882ac9d4349
+  - enabled: 0
+    path: Assets/LeapMotion/Modules/InteractionEngine/Examples/2. Basic UI/Basic UI.unity
+    guid: cca654fcbf487ac40b2b8eaa581451c8
+  - enabled: 0
+    path: Assets/LeapMotion/Modules/InteractionEngine/Examples/5. Anchors/Anchors.unity
+    guid: 7b4a5eb0c5d8ca242976d22c7980ab19
+  - enabled: 1
+    path: Assets/OdometryDemo/Scenes/OdometryPlayground.unity
+    guid: 98ea788b04763ac4fb077c081963d71f

@@ -375,7 +375,7 @@ namespace Leap.Unity {
     protected void LateUpdate() {
       if (_forceCustomUpdate) {
         ManuallyUpdateTemporalWarping();
-      } else if (XRSettings.enabled) {
+      } else if (XRSettings.enabled && autoUpdateHistory) {
         updateTemporalWarping(InputTracking.GetLocalPosition(XRNode.CenterEye),
                               InputTracking.GetLocalRotation(XRNode.CenterEye));
       }
