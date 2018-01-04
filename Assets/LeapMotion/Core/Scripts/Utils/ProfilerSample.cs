@@ -28,11 +28,11 @@ namespace Leap.Unity {
     }
 
     public ProfilerSample(string sampleName, UnityEngine.Object obj) {
-      Profiler.BeginSample(sampleName, obj);
+      //Profiler.BeginSample(sampleName, obj);
     }
 
     public void Dispose() {
-      Profiler.EndSample();
+      //Profiler.EndSample();
     }
   }
 }
