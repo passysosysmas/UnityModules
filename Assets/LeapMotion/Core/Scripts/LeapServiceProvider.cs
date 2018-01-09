@@ -68,7 +68,7 @@ namespace Leap.Unity {
     protected bool _useInterpolation = true;
 
     //Extrapolate on Android to compensate for the latency introduced by its graphics pipeline
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
     protected int ExtrapolationAmount = 15;
     protected int BounceAmount = 70;
 #else
@@ -219,7 +219,7 @@ namespace Leap.Unity {
 
       if (_useInterpolation) {
         leaptime = leap_controller_.Now();
-#if !UNITY_ANDROID
+#if !UNITY_ANDROID || UNITY_EDITOR
         _smoothedTrackingLatency.value = Mathf.Min(_smoothedTrackingLatency.value, 30000f);
         _smoothedTrackingLatency.Update((float)(leap_controller_.Now() - leap_controller_.FrameTimestamp()), Time.deltaTime);
 #endif
@@ -279,7 +279,7 @@ namespace Leap.Unity {
     }
 
     long CalculateInterpolationTime(bool endOfFrame = false) {
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
       return leap_controller_.Now() - 16000;
 #else
       if (leap_controller_ != null) {
