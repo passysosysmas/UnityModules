@@ -42,7 +42,7 @@ namespace Leap.Unity {
     private EyeTextureData _eyeTextureData = new EyeTextureData();
 
     //Image that we have requested from the service.  Are requested in Update and retrieved in OnPreRender
-    protected Image _requestedImage = new Image();
+    //protected Image _requestedImage = new Image();
 
     protected bool imagesEnabled = true;
     private bool checkingImageState = false;
@@ -102,7 +102,7 @@ namespace Leap.Unity {
       }
 
       public void UpdateTexture(Image image) {
-        Array.Copy(image.Data, 0, _intermediateArray, 0, _intermediateArray.Length);
+        //Array.Copy(image.Data, 0, _intermediateArray, 0, _intermediateArray.Length);
         _combinedTexture.LoadRawTextureData(_intermediateArray);
         _combinedTexture.Apply();
       }
@@ -169,14 +169,14 @@ namespace Leap.Unity {
       }
 
       private void addDistortionData(Image image, Color32[] colors, int startIndex) {
-        float[] distortionData = image.Distortion;
+        /*float[] distortionData = image.Distortion;
 
         for (int i = 0; i < distortionData.Length; i += 2) {
           byte b0, b1, b2, b3;
           encodeFloat(distortionData[i], out b0, out b1);
           encodeFloat(distortionData[i + 1], out b2, out b3);
           colors[i / 2 + startIndex] = new Color32(b0, b1, b2, b3);
-        }
+        }*/
       }
 
       private void encodeFloat(float value, out byte byte0, out byte byte1) {
@@ -322,7 +322,7 @@ namespace Leap.Unity {
       if (imagesEnabled) {
         Controller controller = _provider.GetLeapController();
         long start = controller.Now();
-        while (!_requestedImage.IsComplete) {
+        /*while (!_requestedImage.IsComplete) {
           if (controller.Now() - start > ImageTimeout) break;
         }
         if (_requestedImage.IsComplete) {
@@ -332,7 +332,7 @@ namespace Leap.Unity {
           _eyeTextureData.UpdateTextures(_requestedImage, _requestedImage);
         } else if (!checkingImageState) {
           StartCoroutine(checkImageMode());
-        }
+        }*/
       }
     }
 
@@ -340,7 +340,7 @@ namespace Leap.Unity {
       if (imagesEnabled) {
         Frame imageFrame = _provider.CurrentFrame;
         Controller controller = _provider.GetLeapController();
-        _requestedImage = controller.RequestImages(imageFrame.Id, Image.ImageType.DEFAULT);
+        //_requestedImage = controller.RequestImages(imageFrame.Id, Image.ImageType.DEFAULT);
       } else if (!checkingImageState) {
         StartCoroutine(checkImageMode());
       }
