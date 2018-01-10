@@ -362,6 +362,9 @@ namespace Leap.Unity {
       } else {
         leap_controller_.ClearPolicy(Controller.PolicyFlag.POLICY_OPTIMIZE_HMD);
       }
+
+      leap_controller_.ClearPolicy(Controller.PolicyFlag.POLICY_IMAGES);
+      leap_controller_.SetPolicy(Controller.PolicyFlag.POLICY_MAP_POINTS);
     }
     /** Create an instance of a Controller, initialize its policy flags
      * and subscribe to connection event */
