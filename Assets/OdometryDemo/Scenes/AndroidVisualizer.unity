@@ -920,7 +920,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   LeapProvider: {fileID: 1085006171}
-  shouldInterpolate: 1
+  shouldInterpolate: 0
   rawPosition: {x: 0, y: 0, z: 0}
   rawRotation: {x: 0, y: 0, z: 0, w: 0}
   shouldOverride: 1
