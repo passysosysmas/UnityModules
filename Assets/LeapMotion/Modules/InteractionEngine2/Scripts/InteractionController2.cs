@@ -5,6 +5,52 @@ using UnityEngine;
 namespace Leap.Unity.Interaction2 {
 
 	public abstract class InteractionController2 : MonoBehaviour {
+
+			// Controllers
+			//   interactionHand
+			//   
+			//   isTracked
+			//   OnTrackingBegin
+			//   OnTrackingStay
+			//   OnTrackingEnd
+			//
+			//   hoverEnabled
+			//   isHovering
+			//     hoveredObjects
+			//   OnHoverBegin
+			//   OnHoverStay
+			//   OnHoverEnd
+			//     
+			//   primaryHoverEnabled
+			//   isPrimaryHovering
+			//     primaryHoveredObject
+			//     primaryHoverPoint
+			//     primaryHoverDistance
+			//   isPrimaryHoverLocked
+			//     LockPrimaryHover()
+			//     LockPrimaryHover(InteractionObject intObj)
+			//     UnlockPrimaryHover()
+			//   OnPrimaryHoverBegin
+			//   OnPrimaryHoverStay
+			//   OnPrimaryHoverEnd
+			//
+			//   contactEnabled
+			//   isContacting
+			//     contactedObjects
+			//   OnContactBegin
+			//   OnContactStay
+			//   OnContactEnd
+			//
+			//   graspingEnabled
+			//   isGrasping
+			//     graspedObject
+			//   TryGrasp(InteractionObject intObj)
+			//   TeleportGraspObject(InteractionObject intObj)
+			//   GetGraspingPose(InteractionObject intObj,
+			//                   Vector3 objPoint, Quaternion objOrientation)
+			//   OnGraspBegin
+			//   OnGraspStay
+			//   OnGraspEnd
 		
 		public void FixedUpdateController() {
 			fixedUpdateTracking();
@@ -22,6 +68,8 @@ namespace Leap.Unity.Interaction2 {
 		#region Controller Tracking
 
 		public abstract bool isTracked { get; }
+
+		public abstract Vector3 trackedPosition { get; }
 
 		protected abstract void fixedUpdateTracking();
 
